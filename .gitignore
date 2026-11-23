@@ -48,3 +48,10 @@ node_modules/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# seed log
+seed.log
+
+# produkcia
+.env.production
+backups/

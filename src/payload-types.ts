@@ -69,6 +69,10 @@ export interface Config {
   collections: {
     users: User;
     media: Media;
+    topics: Topic;
+    questions: Question;
+    completions: Completion;
+    'test-results': TestResult;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -78,13 +82,17 @@ export interface Config {
   collectionsSelect: {
     users: UsersSelect<false> | UsersSelect<true>;
     media: MediaSelect<false> | MediaSelect<true>;
+    topics: TopicsSelect<false> | TopicsSelect<true>;
+    questions: QuestionsSelect<false> | QuestionsSelect<true>;
+    completions: CompletionsSelect<false> | CompletionsSelect<true>;
+    'test-results': TestResultsSelect<false> | TestResultsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
     'payload-migrations': PayloadMigrationsSelect<false> | PayloadMigrationsSelect<true>;
   };
   db: {
-    defaultIDType: string;
+    defaultIDType: number;
   };
   fallbackLocale: null;
   globals: {};
@@ -122,7 +130,7 @@ export interface UserAuthOperations {
  * via the `definition` "users".
  */
 export interface User {
-  id: string;
+  id: number;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -148,7 +156,7 @@ export interface User {
  * via the `definition` "media".
  */
 export interface Media {
-  id: string;
+  id: number;
   alt: string;
   updatedAt: string;
   createdAt: string;
@@ -163,11 +171,152 @@ export interface Media {
   focalY?: number | null;
 }
 /**
+ * Vzdelávacie témy o social engineeringu.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "topics".
+ */
+export interface Topic {
+  id: number;
+  title: string;
+  /**
+   * Krátky identifikátor v URL, napr. "phishing".
+   */
+  slug: string;
+  order?: number | null;
+  readingMinutes?: number | null;
+  published?: boolean | null;
+  /**
+   * Zobrazí sa na dlaždici a pod nadpisom témy.
+   */
+  summary?: string | null;
+  content?: {
+    root: {
+      type: string;
+      children: {
+        type: any;
+        version: number;
+        [k: string]: unknown;
+      }[];
+      direction: ('ltr' | 'rtl') | null;
+      format: 'left' | 'start' | 'center' | 'right' | 'end' | 'justify' | '';
+      indent: number;
+      version: number;
+    };
+    [k: string]: unknown;
+  } | null;
+  image?: (number | null) | Media;
+  exampleCaption?: string | null;
+  flagsHeading?: string | null;
+  redFlags?:
+    | {
+        title: string;
+        text?: string | null;
+        id?: string | null;
+      }[]
+    | null;
+  dos?:
+    | {
+        text: string;
+        id?: string | null;
+      }[]
+    | null;
+  donts?:
+    | {
+        text: string;
+        id?: string | null;
+      }[]
+    | null;
+  cheatsheet?:
+    | {
+        text: string;
+        id?: string | null;
+      }[]
+    | null;
+  related?: (number | Topic)[] | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Banka otázok: 6 na tému (2 ľahké, 2 stredné, 2 ťažké). Používa ju mini-kvíz pri téme aj záverečný test.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "questions".
+ */
+export interface Question {
+  id: number;
+  question: string;
+  topic?: (number | null) | Topic;
+  difficulty?: ('easy' | 'medium' | 'hard') | null;
+  order?: number | null;
+  /**
+   * Zaškrtnite, ak je správnych odpovedí viac – používateľ vyberá všetky.
+   */
+  multiple?: boolean | null;
+  options?:
+    | {
+        text: string;
+        correct?: boolean | null;
+        id?: string | null;
+      }[]
+    | null;
+  explanation?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Kto a kedy označil tému ako prejdenú. Export do CSV: /progress/export (len po prihlásení do adminu).
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "completions".
+ */
+export interface Completion {
+  id: number;
+  name?: string | null;
+  email: string;
+  topic: number | Topic;
+  completedAt: string;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Každý pokus o záverečný test. Export do CSV: /test/export (len po prihlásení do adminu).
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "test-results".
+ */
+export interface TestResult {
+  id: number;
+  name?: string | null;
+  email: string;
+  score: number;
+  maxScore: number;
+  percent: number;
+  correctCount?: number | null;
+  total?: number | null;
+  passed?: boolean | null;
+  completedAt: string;
+  /**
+   * Pre každú otázku: id, obtiažnosť, vybrané a správne možnosti.
+   */
+  answers?:
+    | {
+        [k: string]: unknown;
+      }
+    | unknown[]
+    | string
+    | number
+    | boolean
+    | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "payload-kv".
  */
 export interface PayloadKv {
-  id: string;
+  id: number;
   key: string;
   data:
     | {
@@ -184,20 +333,36 @@ export interface PayloadKv {
  * via the `definition` "payload-locked-documents".
  */
 export interface PayloadLockedDocument {
-  id: string;
+  id: number;
   document?:
     | ({
         relationTo: 'users';
-        value: string | User;
+        value: number | User;
       } | null)
     | ({
         relationTo: 'media';
-        value: string | Media;
+        value: number | Media;
+      } | null)
+    | ({
+        relationTo: 'topics';
+        value: number | Topic;
+      } | null)
+    | ({
+        relationTo: 'questions';
+        value: number | Question;
+      } | null)
+    | ({
+        relationTo: 'completions';
+        value: number | Completion;
+      } | null)
+    | ({
+        relationTo: 'test-results';
+        value: number | TestResult;
       } | null);
   globalSlug?: string | null;
   user: {
     relationTo: 'users';
-    value: string | User;
+    value: number | User;
   };
   updatedAt: string;
   createdAt: string;
@@ -207,10 +372,10 @@ export interface PayloadLockedDocument {
  * via the `definition` "payload-preferences".
  */
 export interface PayloadPreference {
-  id: string;
+  id: number;
   user: {
     relationTo: 'users';
-    value: string | User;
+    value: number | User;
   };
   key?: string | null;
   value?:
@@ -230,7 +395,7 @@ export interface PayloadPreference {
  * via the `definition` "payload-migrations".
  */
 export interface PayloadMigration {
-  id: string;
+  id: number;
   name?: string | null;
   batch?: number | null;
   updatedAt: string;
@@ -276,6 +441,101 @@ export interface MediaSelect<T extends boolean = true> {
   height?: T;
   focalX?: T;
   focalY?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "topics_select".
+ */
+export interface TopicsSelect<T extends boolean = true> {
+  title?: T;
+  slug?: T;
+  order?: T;
+  readingMinutes?: T;
+  published?: T;
+  summary?: T;
+  content?: T;
+  image?: T;
+  exampleCaption?: T;
+  flagsHeading?: T;
+  redFlags?:
+    | T
+    | {
+        title?: T;
+        text?: T;
+        id?: T;
+      };
+  dos?:
+    | T
+    | {
+        text?: T;
+        id?: T;
+      };
+  donts?:
+    | T
+    | {
+        text?: T;
+        id?: T;
+      };
+  cheatsheet?:
+    | T
+    | {
+        text?: T;
+        id?: T;
+      };
+  related?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "questions_select".
+ */
+export interface QuestionsSelect<T extends boolean = true> {
+  question?: T;
+  topic?: T;
+  difficulty?: T;
+  order?: T;
+  multiple?: T;
+  options?:
+    | T
+    | {
+        text?: T;
+        correct?: T;
+        id?: T;
+      };
+  explanation?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "completions_select".
+ */
+export interface CompletionsSelect<T extends boolean = true> {
+  name?: T;
+  email?: T;
+  topic?: T;
+  completedAt?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "test-results_select".
+ */
+export interface TestResultsSelect<T extends boolean = true> {
+  name?: T;
+  email?: T;
+  score?: T;
+  maxScore?: T;
+  percent?: T;
+  correctCount?: T;
+  total?: T;
+  passed?: T;
+  completedAt?: T;
+  answers?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema

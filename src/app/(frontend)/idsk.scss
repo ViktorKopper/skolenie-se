@@ -1,0 +1,435 @@
+// --- Moderný font (prepíše GDS Transport ešte pred importom IDSK) ---
+$govuk-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", Roboto, "Helvetica Neue", Arial, sans-serif;
+$govuk-font-family-print: $govuk-font-family;
+
+// Zapne globálne štýly GOV.UK (inak <body> nedostane font -> serif fallback)
+$govuk-global-styles: true;
+
+// Cesta k assetom (fonty, obrázky) skopírovaným do public/assets
+$govuk-assets-path: "/assets/";
+
+// Oficiálny ID-SK Frontend (v3) – fork GOV.UK, slovenský dizajn manuál
+@import "@id-sk/frontend/dist/govuk/all";
+
+/* ----- Doplnkové štýly ----- */
+
+/* Font natvrdo na celý dokument – žiadny serif fallback */
+html, body, .govuk-template__body, input, button, textarea, select {
+  font-family: $govuk-font-family;
+}
+body { color: #0b0c0c; }
+
+.app-hero { background: #1b4ea0; color: #fff; }
+.app-hero .govuk-width-container { padding-top: 40px; padding-bottom: 40px; }
+.app-hero h1 { color: #fff; margin-bottom: 10px; letter-spacing: -.01em; }
+.app-hero p { color: #fff; opacity: .92; margin: 0; max-width: 46em; }
+
+/* Wordmark vedľa loga */
+/* Hlavička: logo | názov | vyhľadávanie v jednom riadku, zarovnané na stred */
+.govuk-header { padding-top: 1px; } /* zastaví prepadnutie okraja (sivý pás nad hlavičkou) */
+@media (min-width: 769px) {
+  .govuk-predheader {
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 24px;
+    margin-top: 0; padding: 20px 0 18px;
+  }
+  .govuk-predheader .govuk-header__logo { justify-self: start; display: flex; align-items: center; }
+  .govuk-predheader .govuk-header__btns-search { justify-self: end; }
+}
+.govuk-header__logo img { display: block; height: 64px; width: auto; }
+.app-wordmark {
+  justify-self: center; text-align: center;
+  font-weight: 700; font-size: 22px; line-height: 1.2; color: #1b4ea0; white-space: nowrap;
+}
+@media (max-width: 1100px) { .app-wordmark { font-size: 18px; } }
+@media (max-width: 900px) { .app-wordmark { display: none; } }
+
+/* modrý pás nadväzuje priamo na menu (bez bieleho medzery) */
+#main-content { padding-top: 0; padding-bottom: 0; }
+
+/* Moderné vyhľadávacie pole v hlavičke */
+.app-search { position: relative; display: flex; align-items: center; }
+.app-search svg {
+  position: absolute; left: 13px; width: 18px; height: 18px;
+  color: #6b7280; pointer-events: none;
+}
+.app-search input {
+  width: 260px; max-width: 46vw;
+  padding: 10px 16px 10px 40px;
+  border: 1px solid #d1d5db; border-radius: 999px;
+  font-size: 15px; color: #0b0c0c; background: #f3f4f6;
+  outline: none; transition: border-color .15s, box-shadow .15s, background .15s;
+}
+.app-search input::placeholder { color: #6b7280; }
+.app-search input:focus {
+  border-color: #1b4ea0; background: #fff;
+  box-shadow: 0 0 0 3px rgba(27,78,160,.18);
+}
+
+/* Helpdesk odkaz v menu */
+.govuk-header__navigation-list ul { display: flex; align-items: center; gap: 4px; }
+.govuk-header__navigation-item--help { margin-left: auto; }
+/* ikony v menu – štýl ako rýchle odkazy na intranete: tmavomodré, obrysové */
+.nav-link { display: inline-flex; align-items: center; gap: 10px; }
+.nav-icon { width: 22px; height: 22px; flex: 0 0 auto; color: #1b4ea0; stroke-width: 2.5; }
+.nav-icon--small { width: 14px; height: 14px; color: #6b7280; stroke-width: 2.5; margin-left: 2px; }
+
+/* Dlaždice tém – čisté, moderné, bez ikon */
+.app-topics {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  margin-top: 10px;
+}
+.app-topic {
+  position: relative; display: block;
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;
+  padding: 22px; text-decoration: none; color: #0b0c0c;
+  transition: border-color .15s, box-shadow .15s, transform .15s;
+}
+.app-topic:hover {
+  border-color: #1b4ea0;
+  box-shadow: 0 8px 24px rgba(27,78,160,.12);
+  transform: translateY(-2px);
+}
+.app-topic__title {
+  display: flex; align-items: center; gap: 8px;
+  font-family: $govuk-font-family;
+  font-size: 18px; font-weight: 700; line-height: 1.3; color: #1b4ea0;
+  margin: 0 0 8px;
+}
+.app-topic__title::after {
+  content: "→"; margin-left: auto; font-weight: 400;
+  opacity: 0; transform: translateX(-4px);
+  transition: opacity .15s, transform .15s;
+}
+.app-topic:hover .app-topic__title::after { opacity: 1; transform: translateX(0); }
+.app-topic__desc { font-size: 14.5px; color: #6b7280; margin: 0; line-height: 1.5; }
+
+/* CTA kvíz */
+.app-cta {
+  display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap;
+  background: #fff; border: 3px solid #1b4ea0;
+  border-radius: 12px; padding: 24px; margin-top: 28px;
+}
+.app-cta p { margin: 0; }
+
+/* Zelené štart tlačidlo (školenie/kvíz) */
+.govuk-button--start,
+.govuk-button--start:link,
+.govuk-button--start:visited {
+  background-color: #00703c !important;
+  box-shadow: 0 2px 0 #002d18 !important;
+  color: #fff !important;
+}
+.govuk-button--start:hover,
+.govuk-button--start:focus { background-color: #005a30 !important; color: #fff !important; }
+
+/* ===== Kvíz ===== */
+.quiz-progress { position: sticky; top: 0; background: #fff; padding: 14px 0 16px; margin-bottom: 8px; z-index: 5; }
+.quiz-progress__bar { height: 8px; background: #e5e7eb; border-radius: 999px; overflow: hidden; }
+.quiz-progress__fill { height: 100%; background: #1b4ea0; border-radius: 999px; transition: width .3s ease; }
+.quiz-progress__label { font-size: 14px; color: #6b7280; margin-top: 8px; }
+
+.quiz-card {
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 12px;
+  padding: 24px; margin-bottom: 18px;
+}
+.quiz-card__q { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 16px; }
+.quiz-card__num {
+  flex: 0 0 auto; width: 28px; height: 28px; border-radius: 8px;
+  background: #1b4ea0; color: #fff; font-weight: 700; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+}
+.quiz-card__text { font-size: 17px; font-weight: 700; line-height: 1.4; }
+
+.quiz-opt {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  text-align: left; background: #fff; border: 2px solid #e5e7eb; border-radius: 10px;
+  padding: 13px 16px; margin-bottom: 10px; cursor: pointer; font-size: 15.5px;
+  color: #0b0c0c; transition: border-color .12s, background .12s;
+}
+.quiz-opt:last-child { margin-bottom: 0; }
+.quiz-opt:hover:not(:disabled) { border-color: #1b4ea0; background: #f5f8fe; }
+.quiz-opt:disabled { cursor: default; }
+.quiz-opt__mark {
+  flex: 0 0 auto; width: 22px; height: 22px; border-radius: 50%;
+  border: 2px solid #b1b4b6; display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; color: #fff; line-height: 1;
+}
+.quiz-opt--correct { border-color: #00703c; background: #e8f5ee; }
+.quiz-opt--correct .quiz-opt__mark { border-color: #00703c; background: #00703c; }
+.quiz-opt--wrong { border-color: #d4351c; background: #fbeae8; }
+.quiz-opt--wrong .quiz-opt__mark { border-color: #d4351c; background: #d4351c; }
+
+.quiz-expl {
+  margin-top: 14px; background: #f3f6fc; border-left: 4px solid #1b4ea0;
+  border-radius: 0 8px 8px 0; padding: 14px 16px; font-size: 14.5px; line-height: 1.55; color: #333;
+}
+.quiz-expl strong { color: #1b4ea0; }
+
+.quiz-result {
+  background: #fff; border: 3px solid #1b4ea0; border-radius: 12px;
+  padding: 28px; text-align: center; margin-top: 6px;
+}
+.quiz-result--pass { border-color: #00703c; }
+.quiz-result__score { font-size: 42px; font-weight: 800; color: #1b4ea0; line-height: 1; }
+.quiz-result--pass .quiz-result__score { color: #00703c; }
+.quiz-result__label { font-size: 16px; color: #6b7280; margin: 10px 0 20px; }
+
+/* ===== Detail témy ===== */
+.app-hero__meta {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 10px;
+  margin: 0 0 12px; font-size: 15px; color: #fff; opacity: .92;
+}
+.app-lesson { max-width: 860px; }
+
+.app-prose { font-size: 18px; line-height: 1.65; color: #0b0c0c; }
+.app-prose p { margin: 0 0 16px; }
+.app-prose h2 { font-size: 24px; font-weight: 700; line-height: 1.3; margin: 32px 0 12px; }
+.app-prose h3 { font-size: 20px; font-weight: 700; margin: 24px 0 10px; }
+.app-prose ul, .app-prose ol { margin: 0 0 16px; padding-left: 24px; }
+.app-prose ul { list-style: disc; }
+.app-prose li { margin: 0 0 8px; font-size: 17px; }
+.app-prose strong { font-weight: 700; }
+
+/* Príklad + legenda */
+.app-example { margin: 36px 0; background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; }
+.app-example__head {
+  background: #eaf0fb; color: #1b4ea0; font-size: 15px; font-weight: 700;
+  padding: 12px 20px; border-bottom: 1px solid #dbe4f3;
+}
+.app-example__figure { margin: 0; padding: 20px; }
+.app-example__figure img { display: block; width: 100%; height: auto; border-radius: 10px; }
+.app-example__figure figcaption { margin-top: 10px; font-size: 14px; color: #6b7280; text-align: center; }
+.app-example__title { font-size: 20px; font-weight: 700; margin: 4px 20px 6px; }
+.app-flags { list-style: none; margin: 0; padding: 0 20px 12px; }
+.app-flags li { display: flex; gap: 14px; padding: 14px 0; border-top: 1px solid #f0f1f3; }
+.app-flags li:first-child { border-top: 0; }
+.app-flags__num {
+  flex: 0 0 28px; width: 28px; height: 28px; border-radius: 50%;
+  background: #d4351c; color: #fff; font-size: 14px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.app-flags strong { display: block; font-size: 16px; font-weight: 700; margin-top: 3px; }
+.app-flags p { margin: 4px 0 0; font-size: 15px; line-height: 1.55; color: #4b5563; }
+
+/* Čo robiť / Čo nerobiť */
+.app-dd { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 28px 0; }
+@media (max-width: 720px) { .app-dd { grid-template-columns: 1fr; } }
+.app-dd__col { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 20px 22px; }
+.app-dd__col--do { border-top: 5px solid #00703c; }
+.app-dd__col--dont { border-top: 5px solid #d4351c; }
+.app-dd__col h2 { display: flex; align-items: center; gap: 8px; font-size: 19px; font-weight: 700; margin: 0 0 12px; }
+.app-dd__col--do h2 { color: #00703c; }
+.app-dd__col--dont h2 { color: #d4351c; }
+.app-dd__col ul { list-style: none; margin: 0; padding: 0; }
+.app-dd__col li { position: relative; padding-left: 26px; margin: 0 0 10px; font-size: 16px; line-height: 1.5; }
+.app-dd__col li:last-child { margin-bottom: 0; }
+.app-dd__col--do li::before { content: "✓"; position: absolute; left: 2px; color: #00703c; font-weight: 700; }
+.app-dd__col--dont li::before { content: "✕"; position: absolute; left: 2px; color: #d4351c; font-weight: 700; }
+
+/* Ťahák */
+.app-cheat { background: #1b4ea0; color: #fff; border-radius: 12px; padding: 22px 26px; margin: 28px 0; }
+.app-cheat h2 { color: #fff; font-size: 18px; font-weight: 700; margin: 0 0 12px; opacity: .9; }
+.app-cheat ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.app-cheat li { position: relative; padding-left: 26px; font-size: 18px; font-weight: 700; }
+.app-cheat li::before { content: "→"; position: absolute; left: 0; opacity: .8; }
+
+/* Tlačidlo „Prešiel som tému" */
+.app-complete {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;
+  background: #fff; border: 3px solid #00703c; border-radius: 12px; padding: 24px; margin: 32px 0;
+}
+.app-complete[aria-busy="true"] { min-height: 120px; border-color: #e5e7eb; }
+.app-complete--done { background: #e8f5ee; }
+.app-complete__check {
+  flex: 0 0 48px; width: 48px; height: 48px; border-radius: 50%;
+  background: #00703c; color: #fff; font-size: 26px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.app-complete__body { flex: 1 1 360px; min-width: 0; }
+.app-complete__title { font-size: 20px; font-weight: 700; margin: 0 0 6px; }
+.app-complete__text { font-size: 15px; color: #4b5563; margin: 0 0 12px; }
+.app-complete--done .app-complete__text { margin: 0; }
+.app-complete__form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 4px 0; }
+@media (max-width: 640px) { .app-complete__form { grid-template-columns: 1fr; } }
+.app-field span { display: block; font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.app-field input {
+  width: 100%; box-sizing: border-box; padding: 10px 12px; font-size: 16px;
+  border: 2px solid #b1b4b6; border-radius: 8px; background: #fff; color: #0b0c0c;
+}
+.app-field input:focus { outline: none; border-color: #1b4ea0; box-shadow: 0 0 0 3px rgba(27,78,160,.18); }
+.app-complete__who { font-size: 15px; margin: 0; }
+.app-complete__error { color: #d4351c; font-weight: 700; font-size: 14px; margin: 10px 0 0; }
+.app-complete__btn { margin-bottom: 0 !important; }
+.app-complete__btn:disabled { opacity: .6; cursor: wait; }
+.app-linkbtn {
+  background: none; border: 0; padding: 0; font: inherit; color: #1b4ea0;
+  text-decoration: underline; cursor: pointer;
+}
+
+/* Súvisiace + predošlá/ďalšia */
+.app-related { margin: 40px 0 0; }
+.app-pager { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 36px 0 8px; }
+.app-pager__link {
+  display: flex; flex-direction: column; gap: 4px; text-decoration: none;
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px 20px;
+  transition: border-color .15s, box-shadow .15s;
+}
+.app-pager__link:hover { border-color: #1b4ea0; box-shadow: 0 6px 18px rgba(27,78,160,.10); }
+.app-pager__link--next { text-align: right; }
+.app-pager__dir { font-size: 13px; color: #6b7280; }
+.app-pager__title { font-size: 17px; font-weight: 700; color: #1b4ea0; }
+
+/* Odznak „Prejdené" a celkový progres */
+.app-done {
+  display: inline-block; margin-top: 12px; padding: 3px 10px; border-radius: 999px;
+  background: #e8f5ee; color: #00703c; font-size: 13px; font-weight: 700;
+}
+.app-done--light { margin-top: 0; background: rgba(255,255,255,.18); color: #fff; }
+.app-progress { max-width: 520px; margin: 0 0 22px; }
+.app-progress__row { display: flex; justify-content: space-between; font-size: 15px; margin-bottom: 8px; }
+.app-progress__label { font-weight: 700; }
+.app-progress__pct { color: #6b7280; }
+.app-progress__bar { height: 8px; background: #e5e7eb; border-radius: 999px; overflow: hidden; }
+.app-progress__fill { height: 100%; background: #00703c; border-radius: 999px; transition: width .3s ease; }
+
+/* ===== Mini-kvíz a záverečný test ===== */
+.quiz-mini { margin: 40px 0 0; }
+.quiz-mini[aria-busy="true"] { min-height: 160px; }
+.quiz-mini__head { margin-bottom: 4px; }
+.quiz-mini__head h2 { font-size: 24px; font-weight: 700; margin: 0 0 6px; }
+.quiz-mini__head p { font-size: 16px; color: #4b5563; margin: 0; }
+.quiz-retake { margin: -16px 0 32px; font-size: 15px; }
+
+.quiz-card__body { display: flex; flex-direction: column; min-width: 0; padding-top: 2px; }
+.quiz-card__meta { margin-bottom: 8px; line-height: 1; }
+.quiz-card__text { display: block; }
+.quiz-hint { margin-top: 6px; }
+.quiz-tag {
+  display: inline-block; align-self: flex-start; font-size: 12px; font-weight: 700; padding: 2px 9px; border-radius: 999px;
+}
+.quiz-tag--easy { background: #e8f5ee; color: #00703c; }
+.quiz-tag--medium { background: #fff4d6; color: #8a5a00; }
+.quiz-tag--hard { background: #fbeae8; color: #b3261e; }
+.quiz-hint { font-size: 14px; color: #6b7280; }
+.quiz-topic { font-size: 13px; color: #6b7280; margin: 10px 0 0; }
+.quiz-expl .quiz-topic { display: block; margin-top: 6px; }
+
+.quiz-opt--multi .quiz-opt__mark { border-radius: 5px; }
+.quiz-opt--selected { border-color: #1b4ea0; background: #f5f8fe; }
+.quiz-opt--selected .quiz-opt__mark { border-color: #1b4ea0; background: #1b4ea0; }
+.quiz-opt--selected:not(.quiz-opt--multi) .quiz-opt__mark { box-shadow: inset 0 0 0 4px #fff; }
+
+.quiz-confirm { margin-top: 12px; }
+.quiz-confirm .govuk-button { margin-bottom: 0; }
+.quiz-error { color: #d4351c; font-weight: 700; font-size: 14px; margin: 8px 0; }
+
+.quiz-result--fail { border-color: #d4351c; }
+.quiz-result--fail .quiz-result__score { color: #d4351c; }
+.quiz-result__meta { font-size: 15px; color: #4b5563; margin: -8px 0 18px; }
+.quiz-result__actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+.quiz-result__actions .govuk-button { margin-bottom: 0; }
+
+.test-intro { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px 28px; }
+.test-intro h2 { font-size: 22px; font-weight: 700; margin: 0 0 12px; }
+.test-rules { margin: 0 0 18px; padding-left: 22px; list-style: disc; }
+.test-rules li { font-size: 16px; margin: 0 0 8px; line-height: 1.5; }
+.test-note {
+  background: #fff4d6; border-left: 4px solid #e0a100; padding: 10px 14px;
+  font-size: 15px; margin: 0 0 18px;
+}
+.test-intro .app-complete__who { margin: 0 0 6px; }
+.test-intro__btn { margin: 16px 0 0 !important; }
+.test-submit { margin: 8px 0 24px; }
+.test-review__title { margin-top: 32px; }
+
+/* ===== Prehľad pre adminov (/sprava) ===== */
+.rep-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 12px; }
+.rep-kpi { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px 20px; display: flex; flex-direction: column; gap: 6px; }
+.rep-kpi__label { font-size: 14px; color: #6b7280; }
+.rep-kpi__value { font-size: 32px; font-weight: 700; color: #1b4ea0; line-height: 1.1; }
+.rep-kpi__value small { font-size: 15px; font-weight: 400; color: #6b7280; }
+.rep-note { font-size: 14px; color: #6b7280; margin: 0 0 20px; }
+.rep-exports { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 28px; }
+.rep-exports .govuk-button { margin-bottom: 0; }
+.rep-section { margin-top: 32px; }
+
+.rep-bars { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px 20px; margin-bottom: 32px; }
+.rep-bar { display: grid; grid-template-columns: minmax(160px, 260px) 1fr 70px; align-items: center; gap: 14px; padding: 7px 0; }
+.rep-bar__label { font-size: 15px; }
+.rep-bar__track { height: 10px; background: #e5e7eb; border-radius: 999px; overflow: hidden; }
+.rep-bar__fill { display: block; height: 100%; background: #1b4ea0; border-radius: 999px; }
+.rep-bar__value { font-size: 14px; color: #6b7280; text-align: right; }
+
+.rep-filter { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.rep-filter__item {
+  font-size: 14px; padding: 6px 14px; border-radius: 999px; border: 1px solid #d1d5db;
+  text-decoration: none; color: #0b0c0c; background: #fff;
+}
+.rep-filter__item:hover { border-color: #1b4ea0; }
+.rep-filter__item--active { background: #1b4ea0; border-color: #1b4ea0; color: #fff; }
+
+.rep-table-wrap { overflow-x: auto; background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; }
+.rep-table { width: 100%; border-collapse: collapse; font-size: 15px; }
+.rep-table th { text-align: left; font-size: 13px; color: #6b7280; font-weight: 700; padding: 12px 14px; border-bottom: 1px solid #e5e7eb; white-space: nowrap; }
+.rep-table td { padding: 11px 14px; border-bottom: 1px solid #f0f1f3; vertical-align: top; }
+.rep-table tr:last-child td { border-bottom: 0; }
+.rep-table__q { max-width: 460px; }
+.rep-badge { display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; white-space: nowrap; }
+.rep-badge--ok { background: #e8f5ee; color: #00703c; }
+.rep-badge--wip { background: #fff4d6; color: #8a5a00; }
+.rep-badge--fail { background: #fbeae8; color: #b3261e; }
+
+/* ===== Moje školenie ===== */
+.my-status {
+  display: flex; align-items: center; gap: 22px; flex-wrap: wrap;
+  background: #fff; border: 3px solid #1b4ea0; border-radius: 12px; padding: 24px; margin-bottom: 32px;
+}
+.my-status[aria-busy="true"] { min-height: 160px; border-color: #e5e7eb; }
+.my-status--done { border-color: #00703c; background: #e8f5ee; }
+.my-status__icon {
+  flex: 0 0 72px; width: 72px; height: 72px; border-radius: 50%;
+  background: #eaf0fb; color: #1b4ea0; font-size: 20px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+.my-status--done .my-status__icon { background: #00703c; color: #fff; font-size: 34px; }
+.my-status__body { flex: 1 1 360px; min-width: 0; }
+.my-status__title { font-size: 22px; font-weight: 700; margin: 0 0 4px; }
+.my-status__who { font-size: 15px; color: #4b5563; margin: 0 0 12px; }
+.my-steps { margin: 0; padding-left: 22px; font-size: 16px; }
+.my-steps li { margin-bottom: 6px; }
+.my-steps li.is-done { color: #00703c; }
+.my-steps li.is-done::marker { content: "✓  "; font-weight: 700; }
+.my-status__btn { margin-bottom: 0 !important; }
+.my-section { margin-top: 36px; }
+.my-note { margin-top: 18px; }
+.app-done--todo { background: #f3f4f6; color: #6b7280; }
+
+/* ===== Potvrdenie o absolvovaní ===== */
+.cert-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 20px; }
+.cert-actions__hint { font-size: 14px; color: #6b7280; }
+.cert {
+  max-width: 820px; margin: 0 auto; background: #fff; text-align: center;
+  border: 2px solid #1b4ea0; border-radius: 6px; padding: 48px 56px;
+  outline: 1px solid #1b4ea0; outline-offset: -12px;
+}
+.cert__logo { height: 64px; width: auto; margin-bottom: 28px; }
+.cert__kicker { font-size: 14px; letter-spacing: .16em; text-transform: uppercase; color: #6b7280; margin: 0 0 6px; }
+.cert__title { font-size: 34px; font-weight: 700; color: #1b4ea0; margin: 0 0 4px; }
+.cert__sub { font-size: 17px; color: #4b5563; margin: 0 0 36px; }
+.cert__lead { font-size: 17px; line-height: 1.6; margin: 0 0 10px; }
+.cert__name { font-size: 32px; font-weight: 700; margin: 8px 0 2px; }
+.cert__email { font-size: 15px; color: #6b7280; margin: 0 0 20px; }
+.cert__meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 36px 0 28px; padding: 18px 0; border-top: 1px solid #e5e7eb; border-bottom: 1px solid #e5e7eb; }
+.cert__meta dt { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: #6b7280; margin-bottom: 4px; }
+.cert__meta dd { margin: 0; font-size: 16px; font-weight: 700; }
+.cert__foot { font-size: 12px; color: #6b7280; margin: 0; }
+
+@media print {
+  @page { size: A4; margin: 14mm; }
+  .govuk-header, .govuk-footer, .cert-actions, .govuk-skip-link { display: none !important; }
+  .govuk-main-wrapper, .cert-page { padding: 0 !important; margin: 0 !important; }
+  body, .govuk-template, .govuk-template__body { background: #fff !important; }
+  .cert { border-width: 2px; max-width: none; padding: 40px 44px; }
+}

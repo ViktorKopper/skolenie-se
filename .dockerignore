@@ -1,0 +1,13 @@
+node_modules
+.next
+.git
+.claude
+.vscode
+.env
+.env.*
+!.env.example
+media
+backups
+tests
+*.log
+seed.log

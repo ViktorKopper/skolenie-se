@@ -1,0 +1,38 @@
+# Produkcia na hoste "services". Spustenie:
+#   docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
+name: skolenie-se
+
+services:
+  app:
+    build: .
+    image: skolenie-se:latest
+    restart: unless-stopped
+    env_file: .env.production
+    environment:
+      DATABASE_URL: postgres://payload:${POSTGRES_PASSWORD:?nastav POSTGRES_PASSWORD v .env.production}@db:5432/skolenie_se
+    ports:
+      - '3010:3000' # nginx-rp → http://10.40.6.39:3010
+    volumes:
+      - media:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: skolenie_se
+      POSTGRES_USER: payload
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?nastav POSTGRES_PASSWORD v .env.production}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U payload -d skolenie_se']
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+volumes:
+  pgdata:
+  media:
