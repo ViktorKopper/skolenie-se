@@ -1,19 +1,22 @@
-# Produkcia na hoste "services". Spustenie:
-#   docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
+# Produkcia na hoste "services". Image zostaví GitHub Actions do ghcr.io (pozri DEPLOY.md).
+#   docker compose --env-file .env.production -f docker-compose.prod.yml pull
+#   docker compose --env-file .env.production -f docker-compose.prod.yml up -d
 name: skolenie-se
 
 services:
   app:
-    build: .
-    image: skolenie-se:latest
+    # IMAGE_TAG v .env.production: latest alebo konkrétny commit (sha-xxxxxxx) na rollback
+    image: ghcr.io/viktorkopper/skolenie-se:${IMAGE_TAG:-latest}
     restart: unless-stopped
     env_file: .env.production
     environment:
       DATABASE_URL: postgres://payload:${POSTGRES_PASSWORD:?nastav POSTGRES_PASSWORD v .env.production}@db:5432/skolenie_se
+      LDAP_CA_FILE: /app/certs/ca.cer
     ports:
       - '3010:3000' # nginx-rp → http://10.40.6.39:3010
     volumes:
       - media:/app/media
+      - ./deploy/UPPVL-CA-chain.pem:/app/certs/ca.cer:ro # koreňová CA pre LDAPS
     depends_on:
       db:
         condition: service_healthy

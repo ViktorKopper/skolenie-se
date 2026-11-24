@@ -2,54 +2,62 @@
 
 Cieľ: Docker Compose na hoste **services** (10.40.6.39), za **nginx-rp**, adresa `https://skolenie.urad.vicepremier.gov.sk`, prístup len z LAN a VPN.
 
-## 0. Jednorazovo na Macu: databázové migrácie
+Ako to funguje: push do `main` → GitHub Actions (`.github/workflows/docker.yml`) zostaví image → `ghcr.io/viktorkopper/skolenie-se:latest` (+ `sha-<commit>`). Server nič nebuilduje, len sťahuje image.
 
-V produkcii sa schéma nevytvára automaticky (to robí len `pnpm dev`). Treba vygenerovať migrácie:
+## 0. Na Macu: migrácie databázy (pri každej zmene kolekcií)
 
-```bash
-pnpm payload migrate:create init
-```
-
-Vznikne `src/migrations/`. Potom v `src/payload.config.ts` pridaj import a `prodMigrations`, aby sa migrácie spustili pri štarte produkcie:
-
-```ts
-import { migrations } from './migrations'
-// ...
-db: postgresAdapter({
-  pool: { connectionString: process.env.DATABASE_URL || '' },
-  prodMigrations: migrations,
-}),
-```
-
-Pri každej ďalšej zmene kolekcií: `pnpm payload migrate:create <nazov>` a commit.
-
-Over build lokálne (ak build prejde, prejde aj v Dockeri):
+V produkcii sa schéma nevytvára automaticky (to robí len `pnpm dev`). Migrácie sa spustia samé pri štarte (`prodMigrations`).
 
 ```bash
-pnpm build
+pnpm generate:types
+pnpm payload migrate:create init      # prvýkrát; neskôr migrate:create <nazov-zmeny>
+git add -A && git commit -m "..." && git push
 ```
 
-## 1. Server: kód a konfigurácia
+Stav buildu: GitHub → repo → **Actions**. Image: GitHub → profil → **Packages** → `skolenie-se`.
+
+## 1. Server: prvá inštalácia
 
 ```bash
 sudo mkdir -p /opt/skolenie-se && sudo chown $USER /opt/skolenie-se
-git clone <tvoj-github-repo> /opt/skolenie-se
+git clone https://github.com/ViktorKopper/skolenie-se.git /opt/skolenie-se
 cd /opt/skolenie-se
 cp deploy/env.production.example .env.production
 sed -i "s/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=$(openssl rand -hex 24)/" .env.production
 sed -i "s/^PAYLOAD_SECRET=.*/PAYLOAD_SECRET=$(openssl rand -hex 32)/" .env.production
+sed -i "s/^SYNC_SECRET=.*/SYNC_SECRET=$(openssl rand -hex 32)/" .env.production
 chmod 600 .env.production
+nano .env.production   # vyplň LDAP_BIND_PASSWORD (heslo svc.skolenie)
+```
+
+Ak je repo / image súkromný, prihlás server do ghcr.io tokenom (GitHub → Settings → Developer settings → Personal access tokens (classic), len `read:packages`):
+
+```bash
+read -rs GHCR_TOKEN && echo "$GHCR_TOKEN" | docker login ghcr.io -u ViktorKopper --password-stdin; unset GHCR_TOKEN
+```
+
+Reťazec CA pre LDAPS (`UPPVL-CA-DC01` + `UPPVL-ROOT-CA`, PEM, bez kľúča) je v repozitári ako `deploy/UPPVL-CA-chain.pem`, compose ho pripojí do kontajnera. Over spojenie z hosta services na DC:
+
+```bash
+openssl s_client -connect UPPVL-VM-DC01.urad.vicepremier.gov.sk:636 -CAfile deploy/UPPVL-CA-chain.pem </dev/null 2>&1 | grep -E "Verify return code|connect:"
 ```
 
 ## 2. Spustenie
 
 ```bash
-docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
+cd /opt/skolenie-se
+docker compose --env-file .env.production -f docker-compose.prod.yml pull
+docker compose --env-file .env.production -f docker-compose.prod.yml up -d
 docker compose --env-file .env.production -f docker-compose.prod.yml logs -f app
 curl -s http://127.0.0.1:3010/health
 ```
 
-Admin cookie sa v produkcii posiela len cez HTTPS, preto prvého admina nevytváraj cez `http://…:3010`. Najprv sprav kroky 3–5.
+Session cookie je v produkcii len cez HTTPS (`Secure`). Na rýchly test prihlásenia pred nginx/DNS použi SSH tunel – Chrome berie `localhost` ako zabezpečený:
+
+```bash
+ssh -L 3010:127.0.0.1:3010 <user>@10.40.6.39
+# v Chrome: http://localhost:3010/prihlasenie
+```
 
 ## 3. Certifikát z AD CS
 
@@ -89,7 +97,7 @@ Add-DnsServerResourceRecordA -ZoneName "urad.vicepremier.gov.sk" -Name "skolenie
 
 ## 6. Prvý admin a obsah
 
-1. Otvor `https://skolenie.urad.vicepremier.gov.sk/admin` a vytvor prvého administrátora.
+1. Prihlás sa na `https://skolenie.urad.vicepremier.gov.sk/prihlasenie` účtom zo skupiny **DL_Skolenie_Admins**. Ako núdzový účet (keby AD nešlo) si v `/admin` vytvor aj lokálneho administrátora s dlhým heslom.
 2. Zapni seed a naplň témy a 60 otázok:
 
 ```bash
@@ -124,15 +132,33 @@ docker compose --env-file .env.production -f docker-compose.prod.yml exec -T db 
 docker run --rm -v skolenie-se_media:/m -v "$PWD/backups":/b alpine sh -c "tar xzf /b/media_<datum>.tgz -C /m"
 ```
 
+## 7b. Nočná synchronizácia z AD
+
+Pridá nových zamestnancov, aktualizuje odbory a role, deaktivuje účty, ktoré z AD zmizli (alebo sú vypnuté).
+
+```bash
+sudo tee /etc/cron.d/skolenie-sync >/dev/null <<'EOF'
+15 2 * * * root curl -fsS -X POST -H "Authorization: Bearer $(grep ^SYNC_SECRET= /opt/skolenie-se/.env.production | cut -d= -f2)" http://127.0.0.1:3010/auth/sync >> /var/log/skolenie-sync.log 2>&1
+EOF
+```
+
+Ručne sa dá spustiť aj tlačidlom **Synchronizovať z AD** v `/sprava`.
+
 ## 8. Zabbix
 
 Web scenár: `https://skolenie.urad.vicepremier.gov.sk/health`, očakávaný kód **200**, požadovaný reťazec `"ok":true`, interval 1 min, trigger pri 3 zlyhaniach po sebe.
 
 ## Aktualizácia
 
+Na Macu: zmena → (ak sa menili kolekcie `pnpm payload migrate:create <nazov>`) → commit → push. Počkaj, kým v GitHub Actions dobehne build (zelená fajka). Potom na serveri:
+
 ```bash
 cd /opt/skolenie-se && git pull
-docker compose --env-file .env.production -f docker-compose.prod.yml up -d --build
+docker compose --env-file .env.production -f docker-compose.prod.yml pull
+docker compose --env-file .env.production -f docker-compose.prod.yml up -d
+docker image prune -f
 ```
 
-Migrácie sa spustia automaticky pri štarte (`prodMigrations`).
+`git pull` je potrebný len kvôli `docker-compose.prod.yml` a súborom v `deploy/`. Migrácie sa spustia pri štarte.
+
+Rollback na predchádzajúcu verziu: do `.env.production` pridaj `IMAGE_TAG=sha-<7 znakov commitu>` a `up -d`. Pozor, migrácie sa samé nevrátia.

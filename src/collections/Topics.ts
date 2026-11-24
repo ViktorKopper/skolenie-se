@@ -1,4 +1,5 @@
 import type { CollectionConfig } from 'payload'
+import { adminOnly } from '../access'
 
 export const Topics: CollectionConfig = {
   slug: 'topics',
@@ -10,6 +11,9 @@ export const Topics: CollectionConfig = {
   },
   access: {
     read: () => true,
+    create: adminOnly,
+    update: adminOnly,
+    delete: adminOnly,
   },
   fields: [
     { name: 'title', type: 'text', required: true, label: 'Názov' },

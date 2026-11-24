@@ -433,3 +433,82 @@ body { color: #0b0c0c; }
   body, .govuk-template, .govuk-template__body { background: #fff !important; }
   .cert { border-width: 2px; max-width: none; padding: 40px 44px; }
 }
+
+/* ===== Prihlásenie ===== */
+.login-card {
+  max-width: 460px; background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 28px;
+  display: flex; flex-direction: column; gap: 16px;
+}
+.login-card__btn { margin: 4px 0 0 !important; align-self: flex-start; }
+.login-card__hint { font-size: 14px; color: #6b7280; margin: 0; }
+.quiz-login {
+  display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap;
+  background: #fff; border: 3px solid #1b4ea0; border-radius: 12px; padding: 24px;
+}
+.quiz-login h2 { font-size: 22px; font-weight: 700; margin: 0 0 6px; }
+.quiz-login p { margin: 0; font-size: 16px; color: #4b5563; }
+.quiz-login .govuk-button { margin-bottom: 0; }
+.nav-logout { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; }
+
+/* prehľad – doplnky */
+.rep-block { margin-bottom: 32px; }
+.rep-table__sub { display: block; font-size: 13px; color: #6b7280; }
+.rep-table__bar { display: flex; align-items: center; gap: 10px; min-width: 160px; }
+.rep-table__bar .rep-bar__track { flex: 1; }
+.rep-badge--none { background: #f3f4f6; color: #6b7280; }
+.rep-sync { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.rep-sync .govuk-button { margin-bottom: 0; }
+.rep-sync__msg { font-size: 14px; color: #4b5563; }
+
+/* ===== Prihlasovacia stránka (bez hlavičky, štýl intranetu) ===== */
+.login-body { background: #f2f4f7 !important; }
+.login-page {
+  min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 40px 16px; box-sizing: border-box;
+}
+.login-page__brand { margin-bottom: 28px; }
+.login-page__brand img { height: 56px; width: auto; display: block; }
+.login-page__app { margin: 20px 0 0; font-size: 14px; color: #6b7280; }
+.login-box {
+  width: 100%; max-width: 448px; box-sizing: border-box; background: #fff;
+  border: 1px solid #e3e6eb; border-radius: 10px; padding: 22px 20px 20px;
+  display: flex; flex-direction: column; gap: 0;
+}
+.login-box__title { font-size: 28px; font-weight: 700; line-height: 1.2; margin: 0 0 6px; color: #0b0c0c; }
+.login-box__sub { font-size: 15px; color: #4b5563; margin: 0 0 20px; }
+.login-box__info {
+  background: #eef3fb; border: 1px solid #d5e0f1; border-radius: 6px; padding: 10px 12px;
+  font-size: 15px; line-height: 1.45; color: #0b0c0c; margin-bottom: 22px;
+}
+.login-box__field { display: flex; flex-direction: column; margin-bottom: 18px; }
+.login-box__field label { font-size: 16px; font-weight: 700; margin-bottom: 8px; color: #0b0c0c; }
+.login-box__field input {
+  height: 48px; box-sizing: border-box; width: 100%; padding: 0 14px; font: inherit; font-size: 17px;
+  border: 2px solid #0b0c0c; border-radius: 6px; background: #fff; color: #0b0c0c;
+}
+.login-box__field input:focus { outline: 3px solid #ffdf0f; outline-offset: 0; box-shadow: inset 0 0 0 1px #0b0c0c; }
+.login-box__pw { position: relative; }
+.login-box__pw input { padding-right: 48px; }
+.login-box__eye {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center; border: 0; background: transparent;
+  color: #4b5563; cursor: pointer; border-radius: 4px; padding: 0;
+}
+.login-box__eye svg { width: 20px; height: 20px; }
+.login-box__eye:hover { color: #0b0c0c; }
+.login-box__eye:focus-visible { outline: 3px solid #ffdf0f; }
+.login-box__remember { display: flex; align-items: center; gap: 8px; font-size: 16px; cursor: pointer; margin-bottom: 22px; }
+.login-box__remember input { width: 20px; height: 20px; margin: 0; accent-color: #1d4290; cursor: pointer; }
+.login-box__error {
+  margin: 0 0 16px; padding: 10px 12px; border-left: 4px solid #d0190f; background: #fdf0ef;
+  color: #a3140b; font-size: 15px; font-weight: 600;
+}
+.login-box__btn {
+  height: 48px; width: 100%; border: 0; border-radius: 6px; background: #1d4290; color: #fff;
+  font: inherit; font-size: 17px; font-weight: 700; cursor: pointer;
+}
+.login-box__btn:hover { background: #17366f; }
+.login-box__btn:focus-visible { outline: 3px solid #ffdf0f; outline-offset: 0; }
+.login-box__btn:disabled { opacity: .7; cursor: wait; }
+.login-box__hint { font-size: 14px; color: #6b7280; margin: 16px 0 0; text-align: center; }
+.login-box__hint a { color: #1d4290; }

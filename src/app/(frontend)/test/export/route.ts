@@ -1,5 +1,6 @@
 import { getPayload } from 'payload'
 import config from '@/payload.config'
+import { isAdminUser } from '@/access'
 
 export const dynamic = 'force-dynamic'
 
@@ -7,9 +8,9 @@ export const dynamic = 'force-dynamic'
 export async function GET(req: Request) {
   const payload = await getPayload({ config: await config })
   const { user } = await payload.auth({ headers: req.headers })
-  if (!user) {
-    return new Response('Najprv sa prihláste do administrácie (/admin).', {
-      status: 401,
+  if (!isAdminUser(user)) {
+    return new Response('Export je dostupný len pre administrátorov.', {
+      status: 403,
       headers: { 'Content-Type': 'text/plain; charset=utf-8' },
     })
   }

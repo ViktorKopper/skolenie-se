@@ -8,8 +8,10 @@ export const dynamic = 'force-dynamic'
 
 // GET /test/start – náhodný záverečný test: 2 otázky z každej témy, rôznej obtiažnosti.
 // Správne odpovede sa NEposielajú; vyhodnotenie robí /test/submit.
-export async function GET() {
+export async function GET(req: Request) {
   const payload = await getPayload({ config: await config })
+  const { user } = await payload.auth({ headers: req.headers })
+  if (!user) return NextResponse.json({ ok: false, error: 'Najprv sa prihláste.' }, { status: 401 })
   const bank = await loadBank(payload)
 
   if (bank.topics.length === 0) {

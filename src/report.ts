@@ -1,23 +1,27 @@
 import type { Payload } from 'payload'
 import type { Difficulty } from './quiz-shared'
 
-// Agregácia pre reporting (/sprava a /sprava/export). Len na serveri.
+// Agregácia pre prehľad (/sprava a /sprava/export). Len server.
+// Zoznam ľudí = aktívni používatelia z AD + ktokoľvek, kto má záznam (napr. starší test bez účtu).
 
 export type PersonRow = {
   email: string
   name: string
+  department: string // OU
+  departmentName: string
+  inAd: boolean
   topicsDone: number
-  lastTopicAt: string | null
   attempts: number
   bestPercent: number | null
   passed: boolean
-  lastTestAt: string | null
   lastActivity: string | null
-  complete: boolean // všetky témy + úspešný test
+  lastLogin: string | null
+  complete: boolean
+  started: boolean
 }
 
 export type TopicStat = { slug: string; title: string; done: number }
-
+export type DepartmentStat = { ou: string; name: string; people: number; complete: number; started: number }
 export type QuestionStat = {
   id: string
   question: string
@@ -28,79 +32,133 @@ export type QuestionStat = {
   errorRate: number
 }
 
+type AnyDoc = Record<string, any> // eslint-disable-line @typescript-eslint/no-explicit-any
 const latest = (a: string | null, b: string | null) => (!a ? b : !b ? a : a > b ? a : b)
+const idOf = (v: unknown) => (v && typeof v === 'object' ? String((v as AnyDoc).id) : v == null ? '' : String(v))
 
-export async function buildReport(payload: Payload) {
-  const [topicsRes, compRes, testRes, qRes] = await Promise.all([
+export async function buildReport(payload: Payload, scope: { department?: string } = {}) {
+  const [topicsRes, compRes, testRes, qRes, usersRes, depRes] = await Promise.all([
     payload.find({ collection: 'topics', where: { published: { equals: true } }, pagination: false, depth: 0, sort: 'order' }),
     payload.find({ collection: 'completions', pagination: false, depth: 0 }),
     payload.find({ collection: 'test-results', pagination: false, depth: 0 }),
     payload.find({ collection: 'questions', pagination: false, depth: 0 }),
+    payload.find({ collection: 'users', where: { source: { equals: 'ldap' } }, pagination: false, depth: 0, overrideAccess: true }),
+    payload.find({ collection: 'departments', pagination: false, depth: 0, overrideAccess: true }),
   ])
 
   const topics = topicsRes.docs
   const topicIds = new Set(topics.map((t) => String(t.id)))
   const titleById = new Map(topics.map((t) => [String(t.id), t.title]))
-  const people = new Map<string, PersonRow & { topicSet: Set<string> }>()
+  const depName = new Map((depRes.docs as AnyDoc[]).map((d) => [d.ou as string, (d.name as string) || (d.ou as string)]))
+  const emailByUserId = new Map<string, string>()
 
-  const person = (email: string, name?: string | null) => {
-    let p = people.get(email)
+  type P = PersonRow & { topicSet: Set<string>; tests: AnyDoc[] }
+  const people = new Map<string, P>()
+  const person = (email: string, init: Partial<PersonRow> = {}) => {
+    const key = email.toLowerCase()
+    let p = people.get(key)
     if (!p) {
       p = {
-        email,
-        name: name || '',
+        email: key,
+        name: '',
+        department: '',
+        departmentName: '',
+        inAd: false,
         topicsDone: 0,
-        lastTopicAt: null,
         attempts: 0,
         bestPercent: null,
         passed: false,
-        lastTestAt: null,
         lastActivity: null,
+        lastLogin: null,
         complete: false,
+        started: false,
         topicSet: new Set(),
+        tests: [],
+        ...init,
       }
-      people.set(email, p)
+      people.set(key, p)
     }
-    if (name && !p.name) p.name = name
     return p
   }
 
-  // absolvované témy
-  const doneByTopic = new Map<string, number>()
-  for (const c of compRes.docs) {
-    const tid = typeof c.topic === 'object' && c.topic ? String(c.topic.id) : String(c.topic)
-    if (!topicIds.has(tid)) continue
-    const p = person(c.email, c.name)
-    if (!p.topicSet.has(tid)) {
-      p.topicSet.add(tid)
-      doneByTopic.set(tid, (doneByTopic.get(tid) || 0) + 1)
-    }
-    p.lastTopicAt = latest(p.lastTopicAt, c.completedAt)
+  for (const u of usersRes.docs as AnyDoc[]) {
+    if (!u.email) continue
+    emailByUserId.set(String(u.id), String(u.email).toLowerCase())
+    if (u.active === false) continue // odídení / vypnutí v AD
+    person(u.email, {
+      name: u.name || '',
+      department: u.department || '',
+      inAd: true,
+      lastLogin: u.lastLogin || null,
+    })
   }
 
-  // záverečné testy + štatistika otázok
+  const ownerEmail = (doc: AnyDoc) => emailByUserId.get(idOf(doc.user)) || String(doc.email || '').toLowerCase()
+
+  for (const c of compRes.docs as AnyDoc[]) {
+    const tid = idOf(c.topic)
+    const email = ownerEmail(c)
+    if (!topicIds.has(tid) || !email) continue
+    const p = person(email, { name: c.name || '' })
+    p.topicSet.add(tid)
+    p.lastActivity = latest(p.lastActivity, c.completedAt)
+  }
+
+  for (const r of testRes.docs as AnyDoc[]) {
+    const email = ownerEmail(r)
+    if (!email) continue
+    const p = person(email, { name: r.name || '' })
+    p.tests.push(r)
+    p.attempts++
+    p.bestPercent = Math.max(p.bestPercent ?? 0, r.percent ?? 0)
+    if (r.passed) p.passed = true
+    p.lastActivity = latest(p.lastActivity, r.completedAt)
+  }
+
+  // rozsah (vedúci vidí len svoj odbor)
+  // pozor: prázdny reťazec = rozsah „Nezaradení“, nie „všetci“ (undefined = celý úrad)
+  const all = [...people.values()].filter((p) => scope.department === undefined || p.department === scope.department)
+
+  for (const p of all) {
+    p.topicsDone = p.topicSet.size
+    p.departmentName = p.department ? depName.get(p.department) || p.department : 'Nezaradení'
+    p.complete = topics.length > 0 && p.topicsDone === topics.length && p.passed
+    p.started = p.topicsDone > 0 || p.attempts > 0
+  }
+
+  // plnenie tém
+  const doneByTopic = new Map<string, number>()
+  for (const p of all) for (const tid of p.topicSet) doneByTopic.set(tid, (doneByTopic.get(tid) || 0) + 1)
+  const topicStats: TopicStat[] = topics.map((t) => ({ slug: t.slug, title: t.title, done: doneByTopic.get(String(t.id)) || 0 }))
+
+  // odbory
+  const deps = new Map<string, DepartmentStat>()
+  for (const p of all) {
+    const d = deps.get(p.department) || { ou: p.department, name: p.departmentName, people: 0, complete: 0, started: 0 }
+    d.people++
+    if (p.complete) d.complete++
+    if (p.started) d.started++
+    deps.set(p.department, d)
+  }
+  const departments = [...deps.values()].sort((a, b) => a.name.localeCompare(b.name, 'sk'))
+
+  // najťažšie otázky (z testov ľudí v rozsahu)
   const qText = new Map<string, { question: string; topic: string; difficulty: Difficulty }>()
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  for (const q of qRes.docs as any[]) {
-    const tid = q.topic && typeof q.topic === 'object' ? String(q.topic.id) : String(q.topic)
+  for (const q of qRes.docs as AnyDoc[]) {
     qText.set(String(q.id), {
       question: q.question,
-      topic: titleById.get(tid) || '',
+      topic: titleById.get(idOf(q.topic)) || '',
       difficulty: (q.difficulty || 'easy') as Difficulty,
     })
   }
   const qStats = new Map<string, { answered: number; wrong: number }>()
+  let attempts = 0
   let passedAttempts = 0
-  for (const r of testRes.docs) {
-    const p = person(r.email, r.name)
-    p.attempts++
-    p.bestPercent = Math.max(p.bestPercent ?? 0, r.percent ?? 0)
-    if (r.passed) {
-      p.passed = true
-      passedAttempts++
-    }
-    p.lastTestAt = latest(p.lastTestAt, r.completedAt)
-    if (Array.isArray(r.answers)) {
+  for (const p of all) {
+    for (const r of p.tests) {
+      attempts++
+      if (r.passed) passedAttempts++
+      if (!Array.isArray(r.answers)) continue
       for (const a of r.answers as { id?: string; ok?: boolean }[]) {
         if (!a?.id) continue
         const s = qStats.get(a.id) || { answered: 0, wrong: 0 }
@@ -110,49 +168,30 @@ export async function buildReport(payload: Payload) {
       }
     }
   }
-
-  const rows: PersonRow[] = [...people.values()].map(({ topicSet, ...p }) => {
-    const topicsDone = topicSet.size
-    return {
-      ...p,
-      topicsDone,
-      lastActivity: latest(p.lastTopicAt, p.lastTestAt),
-      complete: topicsDone === topics.length && topics.length > 0 && p.passed,
-    }
-  })
-  rows.sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email, 'sk'))
-
-  const topicStats: TopicStat[] = topics.map((t) => ({
-    slug: t.slug,
-    title: t.title,
-    done: doneByTopic.get(String(t.id)) || 0,
-  }))
-
   const hardest: QuestionStat[] = [...qStats.entries()]
     .filter(([id, s]) => s.answered >= 3 && qText.has(id))
-    .map(([id, s]) => ({
-      id,
-      ...qText.get(id)!,
-      answered: s.answered,
-      wrong: s.wrong,
-      errorRate: Math.round((s.wrong / s.answered) * 100),
-    }))
+    .map(([id, s]) => ({ id, ...qText.get(id)!, answered: s.answered, wrong: s.wrong, errorRate: Math.round((s.wrong / s.answered) * 100) }))
     .sort((a, b) => b.errorRate - a.errorRate || b.answered - a.answered)
     .slice(0, 10)
 
-  const total = rows.length
+  const rows: PersonRow[] = all
+    .map(({ topicSet: _t, tests: _r, ...p }) => p)
+    .sort((a, b) => a.departmentName.localeCompare(b.departmentName, 'sk') || (a.name || a.email).localeCompare(b.name || b.email, 'sk'))
+
   return {
     generatedAt: new Date().toISOString(),
     topicCount: topics.length,
+    scopeName: scope.department === undefined ? null : depName.get(scope.department) || scope.department || 'Nezaradení',
     people: rows,
     topicStats,
+    departments,
     hardest,
     kpi: {
-      people: total,
-      passed: rows.filter((r) => r.passed).length,
+      people: rows.length,
       complete: rows.filter((r) => r.complete).length,
-      allTopics: rows.filter((r) => r.topicsDone === topics.length && topics.length > 0).length,
-      attempts: testRes.docs.length,
+      passed: rows.filter((r) => r.passed).length,
+      notStarted: rows.filter((r) => !r.started).length,
+      attempts,
       passedAttempts,
     },
   }

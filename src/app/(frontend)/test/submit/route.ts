@@ -1,7 +1,6 @@
 import { getPayload } from 'payload'
 import { NextResponse } from 'next/server'
 import config from '@/payload.config'
-import { ALLOWED_EMAIL_DOMAIN, isAllowedEmail } from '@/progress-config'
 import { loadBank, type BankQ } from '@/quiz-bank'
 import { certToken } from '@/cert'
 import {
@@ -19,22 +18,24 @@ export const dynamic = 'force-dynamic'
 const bad = (error: string, status = 400) => NextResponse.json({ ok: false, error }, { status })
 const INVALID = 'Neplatný test – spustite ho, prosím, znova.'
 
-// POST /test/submit { name, email, answers: [{ id, selected: number[] }] }
+// POST /test/submit { answers: [{ id, selected: number[] }] } – len prihlásený používateľ
 // Overí štruktúru testu, vyhodnotí ho na serveri a uloží výsledok.
 export async function POST(req: Request) {
-  let body: { name?: unknown; email?: unknown; answers?: unknown }
+  const payload = await getPayload({ config: await config })
+  const { user } = await payload.auth({ headers: req.headers })
+  if (!user) return bad('Najprv sa prihláste.', 401)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const u = user as any
+  const email = String(u.email || '').toLowerCase()
+  const name = String(u.name || email)
+
+  let body: { answers?: unknown }
   try {
     body = await req.json()
   } catch {
     return bad('Neplatná požiadavka.')
   }
 
-  const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : ''
-  const name = typeof body.name === 'string' ? body.name.trim().slice(0, 120) : ''
-  if (!isAllowedEmail(email) || email.length > 200) return bad(`Použite služobný e-mail @${ALLOWED_EMAIL_DOMAIN}.`)
-  if (name.length < 3) return bad('Zadajte meno a priezvisko.')
-
-  const payload = await getPayload({ config: await config })
   const bank = await loadBank(payload)
   const topicCount = bank.topics.length
   const answers = Array.isArray(body.answers) ? body.answers : null
@@ -82,6 +83,7 @@ export async function POST(req: Request) {
   const saved = await payload.create({
     collection: 'test-results',
     data: {
+      user: u.id,
       name,
       email,
       score,

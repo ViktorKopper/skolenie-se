@@ -1,10 +1,13 @@
 import { getPayload } from 'payload'
 import { headers } from 'next/headers'
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import React from 'react'
 import config from '@/payload.config'
+import { isAdminUser, isManagerUser } from '@/access'
 import { buildReport, fmtDate } from '@/report'
 import { DIFF_LABEL } from '@/quiz-shared'
+import SyncButton from '../SyncButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,50 +15,76 @@ const FILTERS = {
   vsetci: 'Všetci',
   splnene: 'Splnené',
   rozpracovane: 'Rozpracované',
+  nezacali: 'Nezačali',
   bez_testu: 'Bez úspešného testu',
 } as const
 type Filter = keyof typeof FILTERS
 
 const pct = (a: number, b: number) => (b ? Math.round((a / b) * 100) : 0)
 
-export default async function ReportPage({ searchParams }: { searchParams: Promise<{ f?: string }> }) {
+export default async function ReportPage({ searchParams }: { searchParams: Promise<{ f?: string; odbor?: string }> }) {
   const payload = await getPayload({ config: await config })
   const { user } = await payload.auth({ headers: await headers() })
+  if (!user) redirect('/prihlasenie?next=/sprava')
 
-  if (!user) {
+  const admin = isAdminUser(user)
+  const manager = isManagerUser(user)
+  if (!admin && !manager) {
     return (
       <div className="govuk-width-container govuk-main-wrapper">
         <h1 className="govuk-heading-l">Prehľad školenia</h1>
-        <p className="govuk-body">Prehľad je dostupný len pre administrátorov.</p>
-        <Link className="govuk-button" href="/admin/login?redirect=%2Fsprava">
-          Prihlásiť sa do administrácie
-        </Link>
+        <p className="govuk-body">Prehľad je dostupný len pre vedúcich a administrátorov.</p>
       </div>
     )
   }
 
-  const { f } = await searchParams
+  const { f, odbor } = await searchParams
   const filter: Filter = f && f in FILTERS ? (f as Filter) : 'vsetci'
-  const r = await buildReport(payload)
+  // vedúci vidí vždy len svoj odbor; admin môže filtrovať podľa odboru
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const department = manager && !admin ? String((user as any).department || '') : typeof odbor === 'string' ? odbor : ''
+  const r = await buildReport(payload, department || (manager && !admin) ? { department } : {})
   const k = r.kpi
 
   const people = r.people.filter((p) =>
-    filter === 'splnene' ? p.complete : filter === 'rozpracovane' ? !p.complete : filter === 'bez_testu' ? !p.passed : true,
+    filter === 'splnene'
+      ? p.complete
+      : filter === 'rozpracovane'
+        ? p.started && !p.complete
+        : filter === 'nezacali'
+          ? !p.started
+          : filter === 'bez_testu'
+            ? !p.passed
+            : true,
   )
+  const qs = (next: Record<string, string>) => {
+    const p = new URLSearchParams({ ...(odbor && admin ? { odbor } : {}), ...next })
+    for (const [key, v] of [...p.entries()]) if (!v || v === 'vsetci') p.delete(key)
+    const s = p.toString()
+    return s ? `/sprava?${s}` : '/sprava'
+  }
 
   return (
     <>
       <section className="app-hero">
         <div className="govuk-width-container">
-          <h1 className="govuk-heading-xl">Prehľad školenia</h1>
-          <p className="govuk-body-l">Stav k {new Date(r.generatedAt).toLocaleString('sk-SK', { timeZone: 'Europe/Bratislava' })}</p>
+          <h1 className="govuk-heading-xl">Prehľad školenia{r.scopeName ? ` – ${r.scopeName}` : ''}</h1>
+          <p className="govuk-body-l">
+            Stav k {new Date(r.generatedAt).toLocaleString('sk-SK', { timeZone: 'Europe/Bratislava' })}
+          </p>
         </div>
       </section>
 
       <div className="govuk-width-container govuk-main-wrapper">
+        {admin && odbor && (
+          <p className="govuk-body">
+            <Link href="/sprava">← Späť na celý úrad</Link>
+          </p>
+        )}
+
         <div className="rep-kpis">
           <div className="rep-kpi">
-            <span className="rep-kpi__label">Ľudia v evidencii</span>
+            <span className="rep-kpi__label">Zamestnanci</span>
             <span className="rep-kpi__value">{k.people}</span>
           </div>
           <div className="rep-kpi">
@@ -65,9 +94,9 @@ export default async function ReportPage({ searchParams }: { searchParams: Promi
             </span>
           </div>
           <div className="rep-kpi">
-            <span className="rep-kpi__label">Úspešný záverečný test</span>
+            <span className="rep-kpi__label">Ešte nezačali</span>
             <span className="rep-kpi__value">
-              {k.passed} <small>({pct(k.passed, k.people)} %)</small>
+              {k.notStarted} <small>({pct(k.notStarted, k.people)} %)</small>
             </span>
           </div>
           <div className="rep-kpi">
@@ -77,16 +106,54 @@ export default async function ReportPage({ searchParams }: { searchParams: Promi
             </span>
           </div>
         </div>
-        <p className="rep-note">
-          Evidencia zatiaľ obsahuje len ľudí, ktorí v systéme niečo absolvovali. Úplný zoznam zamestnancov a rozdelenie
-          podľa odborov pribudne so synchronizáciou z AD.
-        </p>
 
         <div className="rep-exports">
-          <a className="govuk-button govuk-button--secondary" href="/sprava/export">Prehľad ľudí (CSV)</a>
-          <a className="govuk-button govuk-button--secondary" href="/progress/export">Absolvovanie tém (CSV)</a>
-          <a className="govuk-button govuk-button--secondary" href="/test/export">Výsledky testov (CSV)</a>
+          <a className="govuk-button govuk-button--secondary" href={department ? `/sprava/export?odbor=${encodeURIComponent(department)}` : '/sprava/export'}>
+            Prehľad ľudí (CSV)
+          </a>
+          {admin && (
+            <>
+              <a className="govuk-button govuk-button--secondary" href="/progress/export">Absolvovanie tém (CSV)</a>
+              <a className="govuk-button govuk-button--secondary" href="/test/export">Výsledky testov (CSV)</a>
+              <SyncButton />
+            </>
+          )}
         </div>
+
+        {admin && !odbor && r.departments.length > 0 && (
+          <>
+            <h2 className="govuk-heading-m">Odbory</h2>
+            <div className="rep-table-wrap rep-block">
+              <table className="rep-table">
+                <thead>
+                  <tr>
+                    <th>Odbor</th>
+                    <th>Zamestnanci</th>
+                    <th>Začali</th>
+                    <th>Splnené</th>
+                    <th>Plnenie</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {r.departments.map((d) => (
+                    <tr key={d.ou || '-'}>
+                      <td>{d.ou ? <Link href={`/sprava?odbor=${encodeURIComponent(d.ou)}`}>{d.name}</Link> : d.name}</td>
+                      <td>{d.people}</td>
+                      <td>{d.started}</td>
+                      <td>{d.complete}</td>
+                      <td className="rep-table__bar">
+                        <span className="rep-bar__track">
+                          <span className="rep-bar__fill" style={{ width: `${pct(d.complete, d.people)}%` }} />
+                        </span>
+                        <span>{pct(d.complete, d.people)} %</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
 
         <h2 className="govuk-heading-m">Plnenie tém</h2>
         <div className="rep-bars">
@@ -103,14 +170,10 @@ export default async function ReportPage({ searchParams }: { searchParams: Promi
           ))}
         </div>
 
-        <h2 className="govuk-heading-m">Ľudia</h2>
+        <h2 className="govuk-heading-m">Zamestnanci</h2>
         <nav className="rep-filter" aria-label="Filter">
           {(Object.keys(FILTERS) as Filter[]).map((key) => (
-            <Link
-              key={key}
-              href={key === 'vsetci' ? '/sprava' : `/sprava?f=${key}`}
-              className={`rep-filter__item${filter === key ? ' rep-filter__item--active' : ''}`}
-            >
+            <Link key={key} href={qs({ f: key })} className={`rep-filter__item${filter === key ? ' rep-filter__item--active' : ''}`}>
               {FILTERS[key]}
             </Link>
           ))}
@@ -123,7 +186,7 @@ export default async function ReportPage({ searchParams }: { searchParams: Promi
               <thead>
                 <tr>
                   <th>Meno</th>
-                  <th>E-mail</th>
+                  {!department && <th>Odbor</th>}
                   <th>Témy</th>
                   <th>Najlepší test</th>
                   <th>Pokusy</th>
@@ -134,16 +197,21 @@ export default async function ReportPage({ searchParams }: { searchParams: Promi
               <tbody>
                 {people.map((p) => (
                   <tr key={p.email}>
-                    <td>{p.name || '–'}</td>
-                    <td>{p.email}</td>
+                    <td>
+                      {p.name || p.email}
+                      <span className="rep-table__sub">{p.email}</span>
+                    </td>
+                    {!department && <td>{p.departmentName}</td>}
                     <td>
                       {p.topicsDone} / {r.topicCount}
                     </td>
                     <td>{p.bestPercent === null ? '–' : `${p.bestPercent} %`}</td>
                     <td>{p.attempts}</td>
                     <td>
-                      <span className={`rep-badge ${p.complete ? 'rep-badge--ok' : 'rep-badge--wip'}`}>
-                        {p.complete ? 'Splnené' : 'Rozpracované'}
+                      <span
+                        className={`rep-badge ${p.complete ? 'rep-badge--ok' : p.started ? 'rep-badge--wip' : 'rep-badge--none'}`}
+                      >
+                        {p.complete ? 'Splnené' : p.started ? 'Rozpracované' : 'Nezačal/a'}
                       </span>
                     </td>
                     <td>{fmtDate(p.lastActivity)}</td>

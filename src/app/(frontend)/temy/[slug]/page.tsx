@@ -1,4 +1,5 @@
 import { getPayload } from 'payload'
+import { headers } from 'next/headers'
 import Link from 'next/link'
 import React from 'react'
 import { notFound } from 'next/navigation'
@@ -16,6 +17,7 @@ type Rel = { id: string | number; slug: string; title: string; summary?: string 
 export default async function TopicPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const payload = await getPayload({ config: await config })
+  const { user } = await payload.auth({ headers: await headers() })
 
   const [{ docs }, all] = await Promise.all([
     payload.find({
@@ -172,6 +174,7 @@ export default async function TopicPage({ params }: { params: Promise<{ slug: st
             slug={slug}
             questions={miniQuestions}
             next={next ? { slug: next.slug, title: next.title } : null}
+            loggedIn={Boolean(user)}
           />
 
           {related.length > 0 && (

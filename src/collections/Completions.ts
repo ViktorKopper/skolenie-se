@@ -1,8 +1,9 @@
 import type { CollectionConfig } from 'payload'
+import { adminOnly } from '../access'
 
 // Evidencia absolvovania tém. Zápis ide len cez route /progress (local API),
 // čítať/upravovať môžu iba prihlásení administrátori.
-const isAdmin = ({ req }: { req: { user?: unknown } }) => Boolean(req.user)
+const isAdmin = adminOnly
 
 export const Completions: CollectionConfig = {
   slug: 'completions',
@@ -19,6 +20,7 @@ export const Completions: CollectionConfig = {
     delete: isAdmin,
   },
   fields: [
+    { name: 'user', type: 'relationship', relationTo: 'users', label: 'Používateľ', index: true },
     { name: 'name', type: 'text', label: 'Meno' },
     { name: 'email', type: 'email', required: true, index: true, label: 'E-mail' },
     { name: 'topic', type: 'relationship', relationTo: 'topics', required: true, label: 'Téma' },

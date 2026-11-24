@@ -21,9 +21,10 @@ type Props = {
   slug: string
   questions: MiniQuestion[]
   next?: { slug: string; title: string } | null
+  loggedIn: boolean
 }
 
-export default function TopicQuiz({ slug, questions, next }: Props) {
+export default function TopicQuiz({ slug, questions, next, loggedIn }: Props) {
   const { done, ready } = useProgress()
   const [attempt, setAttempt] = useState(0)
   const [deck, setDeck] = useState<Card[] | null>(null)
@@ -45,6 +46,22 @@ export default function TopicQuiz({ slug, questions, next }: Props) {
     setEvaluated(false)
     setError('')
   }, [questions, attempt])
+
+  if (!loggedIn) {
+    return (
+      <section className="quiz-mini">
+        <div className="quiz-login">
+          <div>
+            <h2>Mini-kvíz k téme</h2>
+            <p>Na vyplnenie mini-kvízu a zaznamenanie absolvovania témy sa prihláste svojím doménovým účtom.</p>
+          </div>
+          <a className="govuk-button govuk-button--start" href={`/prihlasenie?next=/temy/${slug}`}>
+            Prihlásiť sa
+          </a>
+        </div>
+      </section>
+    )
+  }
 
   if (!ready || !deck) return <section className="quiz-mini" aria-busy="true" />
 

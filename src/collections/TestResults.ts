@@ -1,8 +1,9 @@
 import type { CollectionConfig } from 'payload'
+import { adminOnly } from '../access'
 
 // Výsledky záverečného testu. Zapisuje ich len route /test/submit (local API),
 // čítať môžu iba prihlásení administrátori.
-const isAdmin = ({ req }: { req: { user?: unknown } }) => Boolean(req.user)
+const isAdmin = adminOnly
 
 export const TestResults: CollectionConfig = {
   slug: 'test-results',
@@ -19,6 +20,7 @@ export const TestResults: CollectionConfig = {
     delete: isAdmin,
   },
   fields: [
+    { name: 'user', type: 'relationship', relationTo: 'users', label: 'Používateľ', index: true },
     {
       type: 'row',
       fields: [

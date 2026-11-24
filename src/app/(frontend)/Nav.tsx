@@ -1,7 +1,8 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import { usePathname } from 'next/navigation'
+import { logout, useSession } from './session-client'
 
 const HELPDESK_URL = 'https://helpdesk.uppvl.sk/'
 
@@ -54,6 +55,20 @@ const ICONS: Record<string, React.ReactNode> = {
       <line x1="10" y1="14" x2="21" y2="3" />
     </>
   ),
+  login: (
+    <>
+      <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+      <polyline points="10 17 15 12 10 7" />
+      <line x1="15" y1="12" x2="3" y2="12" />
+    </>
+  ),
+  logout: (
+    <>
+      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+      <polyline points="16 17 21 12 16 7" />
+      <line x1="21" y1="12" x2="9" y2="12" />
+    </>
+  ),
 }
 
 function Icon({ name, small = false }: { name: keyof typeof ICONS; small?: boolean }) {
@@ -76,19 +91,8 @@ function Icon({ name, small = false }: { name: keyof typeof ICONS; small?: boole
 
 export default function Nav() {
   const path = usePathname() || '/'
-  const [isAdmin, setIsAdmin] = useState(false)
-
-  // Odkaz na prehľad uvidí len prihlásený administrátor (session z /admin)
-  useEffect(() => {
-    let alive = true
-    fetch('/api/users/me', { credentials: 'same-origin' })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => alive && setIsAdmin(Boolean(d?.user)))
-      .catch(() => undefined)
-    return () => {
-      alive = false
-    }
-  }, [])
+  const { ready, user } = useSession()
+  const canReport = user?.role === 'admin' || user?.role === 'manager'
 
   const item = (active: boolean) =>
     'govuk-header__navigation-item' + (active ? ' govuk-header__navigation-item--active' : '')
@@ -121,7 +125,7 @@ export default function Nav() {
               Moje školenie
             </a>
           </li>
-          {isAdmin && (
+          {canReport && (
             <li className={item(path.startsWith('/sprava'))}>
               <a className="govuk-header__link nav-link" href="/sprava">
                 <Icon name="report" />
@@ -136,6 +140,22 @@ export default function Nav() {
               <Icon name="external" small />
             </a>
           </li>
+          {ready &&
+            (user ? (
+              <li className="govuk-header__navigation-item">
+                <button type="button" className="govuk-header__link nav-link nav-logout" onClick={logout} title={user.name}>
+                  <Icon name="logout" />
+                  Odhlásiť
+                </button>
+              </li>
+            ) : (
+              <li className={item(path.startsWith('/prihlasenie'))}>
+                <a className="govuk-header__link nav-link" href={`/prihlasenie?next=${encodeURIComponent(path)}`}>
+                  <Icon name="login" />
+                  Prihlásiť sa
+                </a>
+              </li>
+            ))}
         </ul>
       </div>
     </nav>

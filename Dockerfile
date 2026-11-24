@@ -9,7 +9,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 FROM base AS deps
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
-RUN npm install -g pnpm@12 && pnpm install --frozen-lockfile
+RUN npm install -g pnpm@12.21.0 && pnpm install --frozen-lockfile
 
 # 2) build (DB ani tajomstvá sa pri builde nepoužívajú – len zástupné hodnoty)
 FROM base AS builder
@@ -18,7 +18,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV PAYLOAD_SECRET=build-only-placeholder \
     DATABASE_URL=postgres://build:build@127.0.0.1:5432/build
-RUN npm install -g pnpm@12 && pnpm run build
+RUN npm install -g pnpm@12.21.0 && pnpm run build
 
 # 3) runtime
 FROM base AS runner

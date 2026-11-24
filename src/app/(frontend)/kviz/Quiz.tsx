@@ -3,8 +3,6 @@
 import React, { useState } from 'react'
 import Link from 'next/link'
 import QuestionCard from '../QuestionCard'
-import { addTest, setIdentity, useProgress, type Identity } from '../progress-store'
-import { ALLOWED_EMAIL_DOMAIN, isAllowedEmail } from '@/progress-config'
 import { TEST_PASS_PCT, shuffle, type Difficulty } from '@/quiz-shared'
 
 type TestQ = {
@@ -32,31 +30,21 @@ type Result = {
 
 type Phase = 'intro' | 'loading' | 'test' | 'sending' | 'result'
 
-export function FinalTest({ topicSlugs }: { topicSlugs: string[] }) {
-  const { identity, done, ready } = useProgress()
+type Props = {
+  user: { name: string; email: string }
+  doneCount: number
+  topicCount: number
+}
+
+export function FinalTest({ user, doneCount, topicCount }: Props) {
   const [phase, setPhase] = useState<Phase>('intro')
   const [qs, setQs] = useState<TestQ[]>([])
   const [sel, setSel] = useState<Record<string, number[]>>({})
   const [result, setResult] = useState<Result | null>(null)
-  const [who, setWho] = useState<Identity | null>(null)
-  const [name, setName] = useState('')
-  const [email, setEmail] = useState('')
-  const [editing, setEditing] = useState(false)
   const [error, setError] = useState('')
-
-  const needIdentity = !identity || editing
-  const doneCount = topicSlugs.filter((s) => done.includes(s)).length
 
   async function start() {
     setError('')
-    const w: Identity = needIdentity ? { name: name.trim(), email: email.trim().toLowerCase() } : identity!
-    if (needIdentity) {
-      if (w.name.length < 3) return setError('Zadajte meno a priezvisko.')
-      if (!isAllowedEmail(w.email)) {
-        return setError(`Zadajte služobný e-mail v tvare meno.priezvisko@${ALLOWED_EMAIL_DOMAIN}.`)
-      }
-    }
-    setWho(w)
     setPhase('loading')
     try {
       const res = await fetch('/test/start', { cache: 'no-store' })
@@ -94,27 +82,11 @@ export function FinalTest({ topicSlugs }: { topicSlugs: string[] }) {
       const res = await fetch('/test/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: who!.name,
-          email: who!.email,
-          answers: qs.map((q) => ({ id: q.id, selected: sel[q.id] })),
-        }),
+        body: JSON.stringify({ answers: qs.map((q) => ({ id: q.id, selected: sel[q.id] })) }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok || !data.ok) throw new Error(data.error || 'Test sa nepodarilo vyhodnotiť.')
-      const res2 = data as Result
-      setResult(res2)
-      addTest({
-        id: res2.resultId,
-        token: res2.certToken || '',
-        percent: res2.percent,
-        passed: res2.passed,
-        score: res2.score,
-        maxScore: res2.maxScore,
-        date: new Date().toISOString(),
-      })
-      setIdentity(who)
-      setEditing(false)
+      setResult(data as Result)
       setPhase('result')
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (e) {
@@ -140,47 +112,15 @@ export function FinalTest({ topicSlugs }: { topicSlugs: string[] }) {
           <li>Správne odpovede a vysvetlenia uvidíte až po odovzdaní testu.</li>
         </ul>
 
-        {ready && doneCount < topicSlugs.length && (
+        {doneCount < topicCount && (
           <p className="test-note">
-            Prejdené témy: {doneCount} z {topicSlugs.length}. Odporúčame najprv prejsť všetky{' '}
-            <Link href="/temy">témy</Link>.
+            Prejdené témy: {doneCount} z {topicCount}. Odporúčame najprv prejsť všetky <Link href="/temy">témy</Link>.
           </p>
         )}
 
-        {ready &&
-          (needIdentity ? (
-            <div className="app-complete__form">
-              <label className="app-field">
-                <span>Meno a priezvisko</span>
-                <input value={name} onChange={(e) => { setName(e.target.value); setError('') }} autoComplete="name" />
-              </label>
-              <label className="app-field">
-                <span>Služobný e-mail</span>
-                <input
-                  type="email"
-                  value={email}
-                  placeholder={`meno.priezvisko@${ALLOWED_EMAIL_DOMAIN}`}
-                  onChange={(e) => { setEmail(e.target.value); setError('') }}
-                  autoComplete="email"
-                />
-              </label>
-            </div>
-          ) : (
-            <p className="app-complete__who">
-              Výsledok sa zaznamená pre <strong>{identity!.name}</strong> ({identity!.email}){' '}
-              <button
-                type="button"
-                className="app-linkbtn"
-                onClick={() => {
-                  setName(identity!.name)
-                  setEmail(identity!.email)
-                  setEditing(true)
-                }}
-              >
-                zmeniť
-              </button>
-            </p>
-          ))}
+        <p className="app-complete__who">
+          Výsledok sa zaznamená pre <strong>{user.name}</strong> ({user.email}).
+        </p>
 
         {error && (
           <p className="quiz-error" role="alert">
@@ -214,7 +154,6 @@ export function FinalTest({ topicSlugs }: { topicSlugs: string[] }) {
           </div>
           <p className="quiz-result__meta">
             {result.score} z {result.maxScore} bodov · {result.correctCount} z {result.total} otázok správne
-            {who ? ` · zaznamenané pre ${who.email}` : ''}
           </p>
           {error && (
             <p className="quiz-error" role="alert">
@@ -235,8 +174,8 @@ export function FinalTest({ topicSlugs }: { topicSlugs: string[] }) {
             <button type="button" className="govuk-button" onClick={start}>
               Spustiť nový test
             </button>
-            <Link className="govuk-button govuk-button--secondary" href="/temy">
-              Späť na témy
+            <Link className="govuk-button govuk-button--secondary" href="/moje-skolenie">
+              Moje školenie
             </Link>
           </div>
         </div>

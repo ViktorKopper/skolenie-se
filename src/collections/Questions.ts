@@ -1,4 +1,5 @@
 import type { CollectionConfig } from 'payload'
+import { adminOnly } from '../access'
 
 // Pozn.: polia nie sú "required" na úrovni DB (existujúce riadky by zablokovali migráciu),
 // povinnosť sa kontroluje cez validate.
@@ -11,8 +12,12 @@ export const Questions: CollectionConfig = {
     description: 'Banka otázok: 6 na tému (2 ľahké, 2 stredné, 2 ťažké). Používa ju mini-kvíz pri téme aj záverečný test.',
     listSearchableFields: ['question'],
   },
+  // správne odpovede nesmú byť verejne čitateľné (REST /api/questions) – appka ich číta na serveri
   access: {
-    read: () => true,
+    read: adminOnly,
+    create: adminOnly,
+    update: adminOnly,
+    delete: adminOnly,
   },
   fields: [
     { name: 'question', type: 'textarea', required: true, label: 'Otázka' },

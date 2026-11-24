@@ -73,6 +73,7 @@ export interface Config {
     questions: Question;
     completions: Completion;
     'test-results': TestResult;
+    departments: Department;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
     'payload-preferences': PayloadPreference;
@@ -86,6 +87,7 @@ export interface Config {
     questions: QuestionsSelect<false> | QuestionsSelect<true>;
     completions: CompletionsSelect<false> | CompletionsSelect<true>;
     'test-results': TestResultsSelect<false> | TestResultsSelect<true>;
+    departments: DepartmentsSelect<false> | DepartmentsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
     'payload-preferences': PayloadPreferencesSelect<false> | PayloadPreferencesSelect<true>;
@@ -126,11 +128,26 @@ export interface UserAuthOperations {
   };
 }
 /**
+ * Účty z AD sa zakladajú pri prvom prihlásení a pri nočnej synchronizácii. Rola sa berie zo skupín DL_Skolenie_Admins / DL_Skolenie_Veduci.
+ *
  * This interface was referenced by `Config`'s JSON-Schema
  * via the `definition` "users".
  */
 export interface User {
   id: number;
+  name?: string | null;
+  username?: string | null;
+  source?: ('local' | 'ldap') | null;
+  /**
+   * Pri účtoch z AD sa prepíše pri ďalšom prihlásení / synchronizácii podľa skupín.
+   */
+  role?: ('employee' | 'manager' | 'admin') | null;
+  department?: string | null;
+  title?: string | null;
+  active?: boolean | null;
+  lastLogin?: string | null;
+  lastSync?: string | null;
+  sessionVersion?: number | null;
   updatedAt: string;
   createdAt: string;
   email: string;
@@ -272,6 +289,7 @@ export interface Question {
  */
 export interface Completion {
   id: number;
+  user?: (number | null) | User;
   name?: string | null;
   email: string;
   topic: number | Topic;
@@ -287,6 +305,7 @@ export interface Completion {
  */
 export interface TestResult {
   id: number;
+  user?: (number | null) | User;
   name?: string | null;
   email: string;
   score: number;
@@ -308,6 +327,19 @@ export interface TestResult {
     | number
     | boolean
     | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
+ * Vytvárajú sa automaticky podľa OU v AD. Upravte len zobrazovaný názov.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "departments".
+ */
+export interface Department {
+  id: number;
+  name: string;
+  ou: string;
   updatedAt: string;
   createdAt: string;
 }
@@ -358,6 +390,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'test-results';
         value: number | TestResult;
+      } | null)
+    | ({
+        relationTo: 'departments';
+        value: number | Department;
       } | null);
   globalSlug?: string | null;
   user: {
@@ -406,6 +442,16 @@ export interface PayloadMigration {
  * via the `definition` "users_select".
  */
 export interface UsersSelect<T extends boolean = true> {
+  name?: T;
+  username?: T;
+  source?: T;
+  role?: T;
+  department?: T;
+  title?: T;
+  active?: T;
+  lastLogin?: T;
+  lastSync?: T;
+  sessionVersion?: T;
   updatedAt?: T;
   createdAt?: T;
   email?: T;
@@ -512,6 +558,7 @@ export interface QuestionsSelect<T extends boolean = true> {
  * via the `definition` "completions_select".
  */
 export interface CompletionsSelect<T extends boolean = true> {
+  user?: T;
   name?: T;
   email?: T;
   topic?: T;
@@ -524,6 +571,7 @@ export interface CompletionsSelect<T extends boolean = true> {
  * via the `definition` "test-results_select".
  */
 export interface TestResultsSelect<T extends boolean = true> {
+  user?: T;
   name?: T;
   email?: T;
   score?: T;
@@ -534,6 +582,16 @@ export interface TestResultsSelect<T extends boolean = true> {
   passed?: T;
   completedAt?: T;
   answers?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "departments_select".
+ */
+export interface DepartmentsSelect<T extends boolean = true> {
+  name?: T;
+  ou?: T;
   updatedAt?: T;
   createdAt?: T;
 }

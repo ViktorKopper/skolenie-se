@@ -1,3 +1,4 @@
+import { headers } from 'next/headers'
 import React from 'react'
 import './idsk.scss'
 import IdskInit from './IdskInit'
@@ -9,6 +10,15 @@ export const metadata = {
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const path = (await headers()).get('x-pathname') || ''
+  if (path.startsWith('/prihlasenie')) {
+    return (
+      <html lang="sk" className="govuk-template">
+        <body className="govuk-template__body login-body">{children}</body>
+      </html>
+    )
+  }
+
   return (
     <html lang="sk" className="govuk-template">
       <body className="govuk-template__body">

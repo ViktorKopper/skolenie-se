@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import config from '@/payload.config'
 import { topics } from '@/seed-data'
 import { questions } from '@/seed-questions'
+import { isAdminUser } from '@/access'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,7 +15,7 @@ export async function GET(req: Request) {
   // V produkcii len s ALLOW_SEED=1 v prostredí a pre prihláseného administrátora
   if (process.env.NODE_ENV === 'production') {
     const { user } = await payload.auth({ headers: req.headers })
-    if (process.env.ALLOW_SEED !== '1' || !user) {
+    if (process.env.ALLOW_SEED !== '1' || !isAdminUser(user)) {
       return NextResponse.json(
         { ok: false, error: 'Seed je v produkcii povolený len s ALLOW_SEED=1 a po prihlásení do /admin.' },
         { status: 403 },

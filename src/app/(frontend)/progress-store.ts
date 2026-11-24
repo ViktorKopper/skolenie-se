@@ -2,69 +2,47 @@
 
 import { useEffect, useState } from 'react'
 
-// Stav v prehliadači – kto som a ktoré témy mám prejdené (pre UI).
-// Záväzná evidencia je v DB (kolekcia Completions).
-export type Identity = { email: string; name: string }
-export type TestAttempt = {
-  id: string
-  token: string
-  percent: number
-  passed: boolean
-  score: number
-  maxScore: number
-  date: string
-}
+// Prejdené témy pre odznaky v UI. Zdroj pravdy je server (/auth/me) – tu je len rýchla kópia,
+// ktorú session-client pri každom načítaní stránky prepíše.
 
-const ID_KEY = 'se-identity'
 const DONE_KEY = 'se-done'
-const TESTS_KEY = 'se-tests'
 const EVT = 'se-progress'
 
-function read<T>(key: string, fallback: T): T {
+function read(): string[] {
   try {
-    const v = window.localStorage.getItem(key)
-    return v ? (JSON.parse(v) as T) : fallback
+    const v = window.localStorage.getItem(DONE_KEY)
+    return v ? (JSON.parse(v) as string[]) : []
   } catch {
-    return fallback
+    return []
   }
 }
 
-function write(key: string, value: unknown) {
+function write(value: string[]) {
   try {
-    window.localStorage.setItem(key, JSON.stringify(value))
+    window.localStorage.setItem(DONE_KEY, JSON.stringify(value))
   } catch {
-    /* súkromný režim a pod. – UI len nezapamätá stav */
+    /* súkromný režim a pod. */
   }
   window.dispatchEvent(new Event(EVT))
 }
 
-export const getIdentity = () => read<Identity | null>(ID_KEY, null)
-export const setIdentity = (i: Identity | null) => write(ID_KEY, i)
-export const getDone = () => read<string[]>(DONE_KEY, [])
+export const getDone = read
 
-export const getTests = () => read<TestAttempt[]>(TESTS_KEY, [])
-export function addTest(t: TestAttempt) {
-  write(TESTS_KEY, [t, ...getTests().filter((x) => x.id !== t.id)].slice(0, 50))
+export function replaceDone(slugs: string[]) {
+  write([...new Set(slugs)])
 }
 
 export function markDone(slug: string) {
-  const done = new Set(getDone())
-  done.add(slug)
-  write(DONE_KEY, [...done])
+  write([...new Set([...read(), slug])])
 }
 
-// Hook: aktuálny zoznam prejdených tém + identita, reaguje na zmeny aj v iných kartách
 export function useProgress() {
   const [done, setDone] = useState<string[]>([])
-  const [identity, setId] = useState<Identity | null>(null)
-  const [tests, setTests] = useState<TestAttempt[]>([])
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
     const sync = () => {
-      setDone(getDone())
-      setId(getIdentity())
-      setTests(getTests())
+      setDone(read())
       setReady(true)
     }
     sync()
@@ -76,5 +54,5 @@ export function useProgress() {
     }
   }, [])
 
-  return { done, identity, tests, ready }
+  return { done, ready }
 }
