@@ -96,16 +96,26 @@ export async function upsertLdapUser(
 // Nočná synchronizácia: založí/aktualizuje všetkých z AD, deaktivuje odídených a vypnuté účty
 export async function syncFromAd(payload: Payload) {
   const users = await ldapListUsers()
+  // poistka: prázdny výsledok z AD (zlý filter/OU) by inak deaktivoval všetkých
+  if (users.length === 0) throw new Error('AD nevrátilo žiadnych používateľov – skontroluj LDAP_BASE_DN.')
+
   const depCache = new Set<string>()
   const seen = new Set<string>()
+  const errors: string[] = []
   let upserted = 0
 
   for (const u of users) {
     if (!u.username || u.disabled || u.excluded) continue
-    await upsertLdapUser(payload, u)
-    await ensureDepartment(payload, u.department, depCache)
-    seen.add(u.username)
-    upserted++
+    seen.add(u.username) // aj pri chybe – nech sa účet nedeaktivuje
+    try {
+      await upsertLdapUser(payload, u)
+      await ensureDepartment(payload, u.department, depCache)
+      upserted++
+    } catch (e) {
+      const msg = `${u.username}: ${(e as Error)?.message || e}`
+      errors.push(msg)
+      console.error(`[sync] ${msg}`)
+    }
   }
 
   const active = await payload.find({
@@ -129,5 +139,6 @@ export async function syncFromAd(payload: Payload) {
     }
   }
 
-  return { inAd: users.length, active: upserted, deactivated, departments: depCache.size }
+  if (errors.length) console.error(`[sync] ${errors.length} chýb, prvé: ${errors.slice(0, 5).join(' | ')}`)
+  return { inAd: users.length, active: upserted, deactivated, departments: depCache.size, errors: errors.length, errorSample: errors.slice(0, 5) }
 }

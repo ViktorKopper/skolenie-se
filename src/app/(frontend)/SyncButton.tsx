@@ -12,9 +12,13 @@ export default function SyncButton() {
     setMsg('')
     try {
       const res = await fetch('/auth/sync', { method: 'POST' })
-      const d = await res.json().catch(() => ({}))
-      if (!res.ok || !d.ok) throw new Error(d.error || 'Synchronizácia zlyhala.')
-      setMsg(`Hotovo: ${d.active} aktívnych, ${d.deactivated} deaktivovaných, ${d.departments} odborov.`)
+      const d = await res.json().catch(() => null)
+      if (!d) throw new Error(`Synchronizácia zlyhala (HTTP ${res.status}${res.status === 504 ? ' – vypršal čas na proxy' : ''}).`)
+      if (!res.ok || !d.ok) throw new Error(d.error || `Synchronizácia zlyhala (HTTP ${res.status}).`)
+      setMsg(
+        `Hotovo: ${d.active} aktívnych, ${d.deactivated} deaktivovaných, ${d.departments} odborov` +
+          (d.errors ? `, ${d.errors} chýb (pozri log)` : '') + '.',
+      )
       setTimeout(() => window.location.reload(), 1500)
     } catch (e) {
       setMsg(e instanceof Error ? e.message : 'Synchronizácia zlyhala.')

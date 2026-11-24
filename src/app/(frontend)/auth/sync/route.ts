@@ -31,6 +31,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, ...result })
   } catch (e) {
     payload.logger.error({ err: e }, 'Synchronizácia z AD zlyhala')
-    return NextResponse.json({ ok: false, error: 'Synchronizácia z AD zlyhala – pozri log aplikácie.' }, { status: 502 })
+    console.error(`[sync] zlyhala: ${(e as Error)?.message || e}`)
+    return NextResponse.json(
+      { ok: false, error: `Synchronizácia z AD zlyhala: ${(e as Error)?.message || 'neznáma chyba'}` },
+      { status: 502 },
+    )
   }
 }
