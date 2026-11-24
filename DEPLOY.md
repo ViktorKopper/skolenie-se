@@ -1,6 +1,6 @@
 # Nasadenie – Školenie o kyberbezpečnosti
 
-Cieľ: Docker Compose na hoste **services** (10.40.6.39), za **nginx-rp**, adresa `https://skolenie.urad.vicepremier.gov.sk`, prístup len z LAN a VPN.
+Cieľ: Docker Compose na hoste **services** (10.40.6.39), za **nginx-rp**, adresa `https://lms.uppvl.sk`, prístup len z LAN a VPN.
 
 Ako to funguje: push do `main` → GitHub Actions (`.github/workflows/docker.yml`) zostaví image → `ghcr.io/viktorkopper/skolenie-se:latest` (+ `sha-<commit>`). Server nič nebuilduje, len sťahuje image.
 
@@ -63,27 +63,27 @@ ssh -L 3010:127.0.0.1:3010 <user>@10.40.6.39
 
 ```bash
 openssl req -new -newkey rsa:2048 -nodes \
-  -keyout skolenie.key -out skolenie.csr \
-  -subj "/CN=skolenie.urad.vicepremier.gov.sk" \
-  -addext "subjectAltName=DNS:skolenie.urad.vicepremier.gov.sk"
+  -keyout lms.uppvl.sk.key -out lms.uppvl.sk.csr \
+  -subj "/CN=lms.uppvl.sk" \
+  -addext "subjectAltName=DNS:lms.uppvl.sk"
 ```
 
 Na CA (PowerShell, šablóna WebServer):
 
 ```powershell
-certreq -submit -attrib "CertificateTemplate:WebServer" skolenie.csr skolenie.crt
+certreq -submit -attrib "CertificateTemplate:WebServer" lms.uppvl.sk.csr lms.uppvl.sk.crt
 ```
 
-Do `skolenie.crt` pripoj aj certifikát CA (`UPPVL-CA-DC01`), ak ho klienti nemajú v reťazci.
+Do `lms.uppvl.sk.crt` pripoj aj certifikát CA (`UPPVL-CA-DC01`), ak ho klienti nemajú v reťazci.
 
 ## 4. nginx-rp (zatiaľ len z admin IP)
 
-Vhost `deploy/nginx/skolenie.conf` má dočasne `allow 10.40.6.23; deny all;` – web uvidíš len ty.
+Vhost `deploy/nginx/lms.uppvl.sk.conf` má dočasne `allow 10.40.6.23; deny all;` – web uvidíš len ty.
 
 ```bash
-docker cp skolenie.crt nginx-rp:/etc/nginx/certs/skolenie.crt
-docker cp skolenie.key nginx-rp:/etc/nginx/certs/skolenie.key
-docker cp deploy/nginx/skolenie.conf nginx-rp:/etc/nginx/conf.d/skolenie.conf
+docker cp lms.uppvl.sk.crt nginx-rp:/etc/nginx/certs/lms.uppvl.sk.crt
+docker cp lms.uppvl.sk.key nginx-rp:/etc/nginx/certs/lms.uppvl.sk.key
+docker cp deploy/nginx/lms.uppvl.sk.conf nginx-rp:/etc/nginx/conf.d/lms.uppvl.sk.conf
 docker exec nginx-rp nginx -t && docker exec nginx-rp nginx -s reload
 ```
 
@@ -92,12 +92,12 @@ Ak má nginx-rp konfiguráciu vo zväzku z hostiteľa, skopíruj súbory tam nam
 ## 5. DNS
 
 ```powershell
-Add-DnsServerResourceRecordA -ZoneName "urad.vicepremier.gov.sk" -Name "skolenie" -IPv4Address <IP nginx-rp>
+Add-DnsServerResourceRecordA -ZoneName "uppvl.sk" -Name "lms" -IPv4Address <IP nginx-rp>
 ```
 
 ## 6. Prvý admin a obsah
 
-1. Prihlás sa na `https://skolenie.urad.vicepremier.gov.sk/prihlasenie` účtom zo skupiny **DL_Skolenie_Admins**. Ako núdzový účet (keby AD nešlo) si v `/admin` vytvor aj lokálneho administrátora s dlhým heslom.
+1. Prihlás sa na `https://lms.uppvl.sk/prihlasenie` účtom zo skupiny **DL_Skolenie_Admins**. Ako núdzový účet (keby AD nešlo) si v `/admin` vytvor aj lokálneho administrátora s dlhým heslom.
 2. Zapni seed a naplň témy a 60 otázok:
 
 ```bash
@@ -105,7 +105,7 @@ echo "ALLOW_SEED=1" >> .env.production
 docker compose --env-file .env.production -f docker-compose.prod.yml up -d
 ```
 
-3. V tom istom prehliadači (prihlásený v adminovi) otvor `https://skolenie.urad.vicepremier.gov.sk/seed`.
+3. V tom istom prehliadači (prihlásený v adminovi) otvor `https://lms.uppvl.sk/seed`.
 4. Seed vypni:
 
 ```bash
@@ -146,7 +146,7 @@ Ručne sa dá spustiť aj tlačidlom **Synchronizovať z AD** v `/sprava`.
 
 ## 8. Zabbix
 
-Web scenár: `https://skolenie.urad.vicepremier.gov.sk/health`, očakávaný kód **200**, požadovaný reťazec `"ok":true`, interval 1 min, trigger pri 3 zlyhaniach po sebe.
+Web scenár: `https://lms.uppvl.sk/health`, očakávaný kód **200**, požadovaný reťazec `"ok":true`, interval 1 min, trigger pri 3 zlyhaniach po sebe.
 
 ## Aktualizácia
 
