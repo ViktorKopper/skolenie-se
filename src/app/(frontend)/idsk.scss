@@ -353,6 +353,19 @@ body { color: #0b0c0c; }
 .rep-note { font-size: 14px; color: #6b7280; margin: 0 0 20px; }
 .rep-exports { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 28px; }
 .rep-exports .govuk-button { margin-bottom: 0; }
+.rep-btn,
+.rep-btn:link,
+.rep-btn:visited {
+  display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 16px; box-sizing: border-box;
+  border: 2px solid #1d4290; border-radius: 6px; background: #fff; color: #1d4290 !important;
+  font: inherit; font-size: 16px; font-weight: 700; text-decoration: none !important; cursor: pointer; white-space: nowrap;
+}
+.rep-btn svg { width: 18px; height: 18px; flex-shrink: 0; }
+.rep-btn:hover { background: #eef3fb; }
+.rep-btn:focus-visible { outline: 3px solid #ffdf0f; outline-offset: 0; box-shadow: none; }
+.rep-btn--primary { background: #1d4290; color: #fff !important; }
+.rep-btn--primary:hover { background: #17366f; border-color: #17366f; }
+.rep-btn:disabled { opacity: .7; cursor: wait; }
 .rep-section { margin-top: 32px; }
 
 .rep-bars { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px 20px; margin-bottom: 32px; }
@@ -475,7 +488,7 @@ body { color: #0b0c0c; }
   display: flex; flex-direction: column; gap: 0;
 }
 .login-box__title { font-size: 28px; font-weight: 700; line-height: 1.2; margin: 0 0 6px; color: #0b0c0c; }
-.login-box__sub { font-size: 15px; color: #4b5563; margin: 0 0 20px; }
+.login-box__sub { font-size: 15px; color: #4b5563; margin: 0 0 22px; }
 .login-box__info {
   background: #eef3fb; border: 1px solid #d5e0f1; border-radius: 6px; padding: 10px 12px;
   font-size: 15px; line-height: 1.45; color: #0b0c0c; margin-bottom: 22px;

@@ -108,13 +108,20 @@ export default async function ReportPage({ searchParams }: { searchParams: Promi
         </div>
 
         <div className="rep-exports">
-          <a className="govuk-button govuk-button--secondary" href={department ? `/sprava/export?odbor=${encodeURIComponent(department)}` : '/sprava/export'}>
+          <a className="rep-btn" href={department ? `/sprava/export?odbor=${encodeURIComponent(department)}` : '/sprava/export'}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
             Prehľad ľudí (CSV)
           </a>
           {admin && (
             <>
-              <a className="govuk-button govuk-button--secondary" href="/progress/export">Absolvovanie tém (CSV)</a>
-              <a className="govuk-button govuk-button--secondary" href="/test/export">Výsledky testov (CSV)</a>
+              <a className="rep-btn" href="/progress/export">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+                Absolvovanie tém (CSV)
+              </a>
+              <a className="rep-btn" href="/test/export">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+                Výsledky testov (CSV)
+              </a>
               <SyncButton />
             </>
           )}

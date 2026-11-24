@@ -55,12 +55,8 @@ export default function LoginForm({ next }: { next: string }) {
       <h1 className="login-box__title">Prihlásenie</h1>
       <p className="login-box__sub">Prihláste sa svojimi prihlasovacími údajmi do počítača.</p>
 
-      <div className="login-box__info">
-        Prihláste sa rovnakým prihlasovacím menom a heslom ako do počítača a služobnej pošty (MS Exchange).
-      </div>
-
       <div className="login-box__field">
-        <label htmlFor="login">Prihlasovacie meno alebo e-mail</label>
+        <label htmlFor="login">Prihlasovacie meno</label>
         <input
           id="login"
           value={login}

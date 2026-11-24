@@ -25,7 +25,12 @@ export default function SyncButton() {
 
   return (
     <span className="rep-sync">
-      <button type="button" className="govuk-button govuk-button--secondary" onClick={run} disabled={busy}>
+      <button type="button" className="rep-btn rep-btn--primary" onClick={run} disabled={busy}>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <polyline points="23 4 23 10 17 10" />
+          <polyline points="1 20 1 14 7 14" />
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+        </svg>
         {busy ? 'Synchronizujem…' : 'Synchronizovať z AD'}
       </button>
       {msg && <span className="rep-sync__msg">{msg}</span>}
