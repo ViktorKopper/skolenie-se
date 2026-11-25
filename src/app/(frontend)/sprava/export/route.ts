@@ -2,6 +2,7 @@ import { getPayload } from 'payload'
 import config from '@/payload.config'
 import { isAdminUser, isManagerUser } from '@/access'
 import { buildReport, fmtDate } from '@/report'
+import { CERT_STATUS_LABEL } from '@/certificates'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,7 +30,7 @@ export async function GET(req: Request) {
     return `"${s.replace(/"/g, '""')}"`
   }
   const rows: unknown[][] = [
-    ['Meno', 'E-mail', 'Odbor', 'Prejdené témy', 'Z počtu', 'Najlepší test (%)', 'Pokusy o test', 'Test úspešný', 'Stav', 'Posledná aktivita', 'Posledné prihlásenie'],
+    ['Meno', 'E-mail', 'Odbor', 'Prejdené témy', 'Z počtu', 'Najlepší test (%)', 'Pokusy o test', 'Test úspešný', 'Stav', 'Osvedčenie', 'Platné do', 'Stav osvedčenia', 'Posledná aktivita', 'Posledné prihlásenie'],
     ...r.people.map((p) => [
       p.name,
       p.email,
@@ -40,6 +41,9 @@ export async function GET(req: Request) {
       p.attempts,
       p.passed ? 'áno' : 'nie',
       p.complete ? 'Splnené' : p.started ? 'Rozpracované' : 'Nezačal/a',
+      p.certNumber || '',
+      fmtDate(p.certValidUntil),
+      p.certStatus ? CERT_STATUS_LABEL[p.certStatus] : '',
       fmtDate(p.lastActivity),
       fmtDate(p.lastLogin),
     ]),

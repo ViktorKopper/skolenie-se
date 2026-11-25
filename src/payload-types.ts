@@ -73,6 +73,7 @@ export interface Config {
     questions: Question;
     completions: Completion;
     'test-results': TestResult;
+    certificates: Certificate;
     departments: Department;
     'payload-kv': PayloadKv;
     'payload-locked-documents': PayloadLockedDocument;
@@ -87,6 +88,7 @@ export interface Config {
     questions: QuestionsSelect<false> | QuestionsSelect<true>;
     completions: CompletionsSelect<false> | CompletionsSelect<true>;
     'test-results': TestResultsSelect<false> | TestResultsSelect<true>;
+    certificates: CertificatesSelect<false> | CertificatesSelect<true>;
     departments: DepartmentsSelect<false> | DepartmentsSelect<true>;
     'payload-kv': PayloadKvSelect<false> | PayloadKvSelect<true>;
     'payload-locked-documents': PayloadLockedDocumentsSelect<false> | PayloadLockedDocumentsSelect<true>;
@@ -331,6 +333,35 @@ export interface TestResult {
   createdAt: string;
 }
 /**
+ * Vydávajú sa automaticky po úspešnom záverečnom teste, platnosť 12 mesiacov. PDF: /osvedcenie/<číslo>.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "certificates".
+ */
+export interface Certificate {
+  id: number;
+  number: string;
+  name: string;
+  email?: string | null;
+  user: number | User;
+  departmentName?: string | null;
+  departmentOu?: string | null;
+  testResult?: (number | null) | TestResult;
+  percent?: number | null;
+  topicCount?: number | null;
+  questionCount?: number | null;
+  issuedAt: string;
+  validUntil: string;
+  issuedDay?: string | null;
+  /**
+   * Zrušené osvedčenie sa pri overení zobrazí ako neplatné. Človek môže získať nové úspešným testom.
+   */
+  revoked?: boolean | null;
+  revokedReason?: string | null;
+  updatedAt: string;
+  createdAt: string;
+}
+/**
  * Vytvárajú sa automaticky podľa OU v AD. Upravte len zobrazovaný názov.
  *
  * This interface was referenced by `Config`'s JSON-Schema
@@ -390,6 +421,10 @@ export interface PayloadLockedDocument {
     | ({
         relationTo: 'test-results';
         value: number | TestResult;
+      } | null)
+    | ({
+        relationTo: 'certificates';
+        value: number | Certificate;
       } | null)
     | ({
         relationTo: 'departments';
@@ -582,6 +617,29 @@ export interface TestResultsSelect<T extends boolean = true> {
   passed?: T;
   completedAt?: T;
   answers?: T;
+  updatedAt?: T;
+  createdAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "certificates_select".
+ */
+export interface CertificatesSelect<T extends boolean = true> {
+  number?: T;
+  name?: T;
+  email?: T;
+  user?: T;
+  departmentName?: T;
+  departmentOu?: T;
+  testResult?: T;
+  percent?: T;
+  topicCount?: T;
+  questionCount?: T;
+  issuedAt?: T;
+  validUntil?: T;
+  issuedDay?: T;
+  revoked?: T;
+  revokedReason?: T;
   updatedAt?: T;
   createdAt?: T;
 }

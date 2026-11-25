@@ -7,6 +7,7 @@ import config from '@/payload.config'
 import { isAdminUser, isManagerUser } from '@/access'
 import { buildReport, fmtDate } from '@/report'
 import { DIFF_LABEL } from '@/quiz-shared'
+import { CERT_STATUS_LABEL, certPdfPath, fmtSkDate } from '@/certificates'
 import SyncButton from '../SyncButton'
 
 export const dynamic = 'force-dynamic'
@@ -17,7 +18,11 @@ const FILTERS = {
   rozpracovane: 'Rozpracované',
   nezacali: 'Nezačali',
   bez_testu: 'Bez úspešného testu',
+  konci: 'Platnosť končí',
+  vyprsane: 'Platnosť vypršala',
 } as const
+
+const CERT_BADGE = { valid: 'rep-badge--ok', expiring: 'rep-badge--wip', expired: 'rep-badge--fail', revoked: 'rep-badge--fail' } as const
 type Filter = keyof typeof FILTERS
 
 const pct = (a: number, b: number) => (b ? Math.round((a / b) * 100) : 0)
@@ -55,7 +60,11 @@ export default async function ReportPage({ searchParams }: { searchParams: Promi
           ? !p.started
           : filter === 'bez_testu'
             ? !p.passed
-            : true,
+            : filter === 'konci'
+              ? p.certStatus === 'expiring'
+              : filter === 'vyprsane'
+                ? p.certStatus === 'expired'
+                : true,
   )
   const qs = (next: Record<string, string>) => {
     const p = new URLSearchParams({ ...(odbor && admin ? { odbor } : {}), ...next })
@@ -107,6 +116,15 @@ export default async function ReportPage({ searchParams }: { searchParams: Promi
           </div>
         </div>
 
+        {(k.expiring > 0 || k.expired > 0) && (
+          <p className="rep-note">
+            Osvedčenia:{' '}
+            {k.expiring > 0 && <Link href={qs({ f: 'konci' })}>{k.expiring} končí do 30 dní</Link>}
+            {k.expiring > 0 && k.expired > 0 && ' · '}
+            {k.expired > 0 && <Link href={qs({ f: 'vyprsane' })}>{k.expired} vypršalo</Link>}
+          </p>
+        )}
+
         <div className="rep-exports">
           <a className="rep-btn" href={department ? `/sprava/export?odbor=${encodeURIComponent(department)}` : '/sprava/export'}>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
@@ -117,6 +135,10 @@ export default async function ReportPage({ searchParams }: { searchParams: Promi
               <a className="rep-btn" href="/progress/export">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
                 Absolvovanie tém (CSV)
+              </a>
+              <a className="rep-btn" href="/osvedcenia/export">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+                Osvedčenia (CSV)
               </a>
               <a className="rep-btn" href="/test/export">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
@@ -198,6 +220,7 @@ export default async function ReportPage({ searchParams }: { searchParams: Promi
                   <th>Najlepší test</th>
                   <th>Pokusy</th>
                   <th>Stav</th>
+                  <th>Osvedčenie</th>
                   <th>Posledná aktivita</th>
                 </tr>
               </thead>
@@ -220,6 +243,19 @@ export default async function ReportPage({ searchParams }: { searchParams: Promi
                       >
                         {p.complete ? 'Splnené' : p.started ? 'Rozpracované' : 'Nezačal/a'}
                       </span>
+                    </td>
+                    <td>
+                      {p.certNumber && p.certStatus ? (
+                        <>
+                          <a href={certPdfPath(p.certNumber)}>{p.certNumber}</a>
+                          <span className="rep-table__sub">
+                            <span className={`rep-badge ${CERT_BADGE[p.certStatus]}`}>{CERT_STATUS_LABEL[p.certStatus]}</span>{' '}
+                            do {fmtSkDate(p.certValidUntil)}
+                          </span>
+                        </>
+                      ) : (
+                        '–'
+                      )}
                     </td>
                     <td>{fmtDate(p.lastActivity)}</td>
                   </tr>

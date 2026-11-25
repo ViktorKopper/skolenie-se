@@ -27,6 +27,13 @@ const ICONS: Record<string, React.ReactNode> = {
       <path d="m9 14 2 2 4-4" />
     </>
   ),
+  demo: (
+    <>
+      <path d="M2 3h20" />
+      <path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3" />
+      <path d="m7 21 5-5 5 5" />
+    </>
+  ),
   me: (
     <>
       <circle cx="12" cy="8" r="4" />
@@ -130,6 +137,14 @@ export default function Nav() {
               <a className="govuk-header__link nav-link" href="/sprava">
                 <Icon name="report" />
                 Prehľad
+              </a>
+            </li>
+          )}
+          {user?.role === 'admin' && (
+            <li className={item(path.startsWith('/demo'))}>
+              <a className="govuk-header__link nav-link" href="/demo">
+                <Icon name="demo" />
+                Demo
               </a>
             </li>
           )}

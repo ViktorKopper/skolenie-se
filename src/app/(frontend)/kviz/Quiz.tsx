@@ -18,7 +18,7 @@ type QResult = { id: string; correct: boolean; correctIdx: number[]; explanation
 
 type Result = {
   resultId: string
-  certToken: string | null
+  certificate: { number: string; url: string; validUntil: string } | null
   score: number
   maxScore: number
   percent: number
@@ -34,9 +34,10 @@ type Props = {
   user: { name: string; email: string }
   doneCount: number
   topicCount: number
+  demo?: boolean // ukážka zo stránky /demo – výsledok sa neukladá
 }
 
-export function FinalTest({ user, doneCount, topicCount }: Props) {
+export function FinalTest({ user, doneCount, topicCount, demo = false }: Props) {
   const [phase, setPhase] = useState<Phase>('intro')
   const [qs, setQs] = useState<TestQ[]>([])
   const [sel, setSel] = useState<Record<string, number[]>>({})
@@ -82,7 +83,7 @@ export function FinalTest({ user, doneCount, topicCount }: Props) {
       const res = await fetch('/test/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ answers: qs.map((q) => ({ id: q.id, selected: sel[q.id] })) }),
+        body: JSON.stringify({ answers: qs.map((q) => ({ id: q.id, selected: sel[q.id] })), ...(demo ? { demo: true } : {}) }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok || !data.ok) throw new Error(data.error || 'Test sa nepodarilo vyhodnotiť.')
@@ -118,9 +119,15 @@ export function FinalTest({ user, doneCount, topicCount }: Props) {
           </p>
         )}
 
-        <p className="app-complete__who">
-          Výsledok sa zaznamená pre <strong>{user.name}</strong> ({user.email}).
-        </p>
+        {demo ? (
+          <p className="verify-demo">
+            <strong>UKÁŽKA</strong> – výsledok sa neuloží do štatistík a nevznikne skutočné osvedčenie.
+          </p>
+        ) : (
+          <p className="app-complete__who">
+            Výsledok sa zaznamená pre <strong>{user.name}</strong> ({user.email}).
+          </p>
+        )}
 
         {error && (
           <p className="quiz-error" role="alert">
@@ -155,27 +162,28 @@ export function FinalTest({ user, doneCount, topicCount }: Props) {
           <p className="quiz-result__meta">
             {result.score} z {result.maxScore} bodov · {result.correctCount} z {result.total} otázok správne
           </p>
+          {result.passed && result.certificate && (
+            <p className="quiz-result__meta">
+              Osvedčenie č. <strong>{result.certificate.number}</strong> platí do{' '}
+              {new Date(result.certificate.validUntil).toLocaleDateString('sk-SK', { timeZone: 'Europe/Bratislava' })}.
+            </p>
+          )}
           {error && (
             <p className="quiz-error" role="alert">
               {error}
             </p>
           )}
           <div className="quiz-result__actions">
-            {result.passed && result.certToken && (
-              <a
-                className="govuk-button govuk-button--start"
-                href={`/potvrdenie/${result.resultId}?t=${result.certToken}`}
-                target="_blank"
-                rel="noopener"
-              >
-                Stiahnuť potvrdenie
+            {result.passed && result.certificate && (
+              <a className="govuk-button govuk-button--start" href={result.certificate.url} {...(demo ? { target: '_blank', rel: 'noopener' } : {})}>
+                Stiahnuť osvedčenie (PDF)
               </a>
             )}
             <button type="button" className="govuk-button" onClick={start}>
               Spustiť nový test
             </button>
-            <Link className="govuk-button govuk-button--secondary" href="/moje-skolenie">
-              Moje školenie
+            <Link className="govuk-button govuk-button--secondary" href={demo ? '/demo' : '/moje-skolenie'}>
+              {demo ? 'Späť na Demo' : 'Moje školenie'}
             </Link>
           </div>
         </div>

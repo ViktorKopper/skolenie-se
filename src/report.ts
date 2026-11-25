@@ -1,5 +1,6 @@
 import type { Payload } from 'payload'
 import type { Difficulty } from './quiz-shared'
+import { certStatus, isActiveCert, VALID_MONTHS, type CertStatus } from './certificates'
 
 // Agregácia pre prehľad (/sprava a /sprava/export). Len server.
 // Zoznam ľudí = aktívni používatelia z AD + ktokoľvek, kto má záznam (napr. starší test bez účtu).
@@ -18,6 +19,9 @@ export type PersonRow = {
   lastLogin: string | null
   complete: boolean
   started: boolean
+  certNumber: string | null
+  certValidUntil: string | null
+  certStatus: CertStatus | null
 }
 
 export type TopicStat = { slug: string; title: string; done: number }
@@ -37,13 +41,14 @@ const latest = (a: string | null, b: string | null) => (!a ? b : !b ? a : a > b 
 const idOf = (v: unknown) => (v && typeof v === 'object' ? String((v as AnyDoc).id) : v == null ? '' : String(v))
 
 export async function buildReport(payload: Payload, scope: { department?: string } = {}) {
-  const [topicsRes, compRes, testRes, qRes, usersRes, depRes] = await Promise.all([
+  const [topicsRes, compRes, testRes, qRes, usersRes, depRes, certRes] = await Promise.all([
     payload.find({ collection: 'topics', where: { published: { equals: true } }, pagination: false, depth: 0, sort: 'order' }),
     payload.find({ collection: 'completions', pagination: false, depth: 0 }),
     payload.find({ collection: 'test-results', pagination: false, depth: 0 }),
     payload.find({ collection: 'questions', pagination: false, depth: 0 }),
     payload.find({ collection: 'users', where: { source: { equals: 'ldap' } }, pagination: false, depth: 0, overrideAccess: true }),
     payload.find({ collection: 'departments', pagination: false, depth: 0, overrideAccess: true }),
+    payload.find({ collection: 'certificates', pagination: false, depth: 0, overrideAccess: true, sort: '-issuedAt' }),
   ])
 
   const topics = topicsRes.docs
@@ -52,7 +57,7 @@ export async function buildReport(payload: Payload, scope: { department?: string
   const depName = new Map((depRes.docs as AnyDoc[]).map((d) => [d.ou as string, (d.name as string) || (d.ou as string)]))
   const emailByUserId = new Map<string, string>()
 
-  type P = PersonRow & { topicSet: Set<string>; tests: AnyDoc[] }
+  type P = PersonRow & { topicSet: Set<string>; tests: AnyDoc[]; cert: AnyDoc | null }
   const people = new Map<string, P>()
   const person = (email: string, init: Partial<PersonRow> = {}) => {
     const key = email.toLowerCase()
@@ -72,8 +77,12 @@ export async function buildReport(payload: Payload, scope: { department?: string
         lastLogin: null,
         complete: false,
         started: false,
+        certNumber: null,
+        certValidUntil: null,
+        certStatus: null,
         topicSet: new Set(),
         tests: [],
+        cert: null,
         ...init,
       }
       people.set(key, p)
@@ -115,14 +124,33 @@ export async function buildReport(payload: Payload, scope: { department?: string
     p.lastActivity = latest(p.lastActivity, r.completedAt)
   }
 
+  // osvedčenia – na osobu platné (ak je), inak najnovšie
+  for (const c of certRes.docs as AnyDoc[]) {
+    const email = ownerEmail(c)
+    if (!email || !people.has(email)) continue
+    const p = people.get(email)!
+    if (!p.cert || (!isActiveCert(p.cert) && isActiveCert(c))) p.cert = c
+  }
+
   // rozsah (vedúci vidí len svoj odbor)
   // pozor: prázdny reťazec = rozsah „Nezaradení“, nie „všetci“ (undefined = celý úrad)
   const all = [...people.values()].filter((p) => scope.department === undefined || p.department === scope.department)
 
+  const validFrom = new Date()
+  validFrom.setMonth(validFrom.getMonth() - VALID_MONTHS)
+  const validFromIso = validFrom.toISOString()
   for (const p of all) {
     p.topicsDone = p.topicSet.size
     p.departmentName = p.department ? depName.get(p.department) || p.department : 'Nezaradení'
-    p.complete = topics.length > 0 && p.topicsDone === topics.length && p.passed
+    if (p.cert) {
+      p.certNumber = p.cert.number
+      p.certValidUntil = p.cert.validUntil
+      p.certStatus = certStatus(p.cert)
+    }
+    // splnené = všetky témy + platné osvedčenie (alebo úspešný test za posledných 12 mesiacov, ak osvedčenie ešte nevzniklo)
+    const recentPass = p.tests.some((t) => t.passed && String(t.completedAt) >= validFromIso)
+    const certOk = p.cert ? isActiveCert(p.cert) : recentPass
+    p.complete = topics.length > 0 && p.topicsDone === topics.length && certOk
     p.started = p.topicsDone > 0 || p.attempts > 0
   }
 
@@ -175,7 +203,7 @@ export async function buildReport(payload: Payload, scope: { department?: string
     .slice(0, 10)
 
   const rows: PersonRow[] = all
-    .map(({ topicSet: _t, tests: _r, ...p }) => p)
+    .map(({ topicSet: _t, tests: _r, cert: _c, ...p }) => p)
     .sort((a, b) => a.departmentName.localeCompare(b.departmentName, 'sk') || (a.name || a.email).localeCompare(b.name || b.email, 'sk'))
 
   return {
@@ -191,6 +219,8 @@ export async function buildReport(payload: Payload, scope: { department?: string
       complete: rows.filter((r) => r.complete).length,
       passed: rows.filter((r) => r.passed).length,
       notStarted: rows.filter((r) => !r.started).length,
+      expiring: rows.filter((r) => r.certStatus === 'expiring').length,
+      expired: rows.filter((r) => r.certStatus === 'expired').length,
       attempts,
       passedAttempts,
     },

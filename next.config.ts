@@ -8,6 +8,8 @@ const dirname = path.dirname(__filename)
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  // generovanie PDF osvedčení – nespájať do bundlu, beží ako bežný Node balík
+  serverExternalPackages: ['@react-pdf/renderer'],
   sassOptions: {
     loadPaths: ['node_modules'],
     includePaths: ['node_modules'],

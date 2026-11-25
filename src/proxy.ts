@@ -8,6 +8,7 @@ const OPEN = [
   /^\/auth\//,
   /^\/health$/,
   /^\/potvrdenie\//,
+  /^\/overenie\//, // overenie osvedčenia z QR kódu (podpísaný odkaz)
   /^\/seed$/,
   /^\/(progress|test)(\/|$)/,
   /^\/sprava\/export$/,

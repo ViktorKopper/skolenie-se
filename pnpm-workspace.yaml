@@ -4,3 +4,5 @@ allowBuilds:
   sharp: true
   unrs-resolver: true
   workerd: true
+minimumReleaseAgeExclude:
+  - '@react-pdf/hyphenate@0.1.1'

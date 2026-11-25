@@ -12,6 +12,7 @@ import { Questions } from './collections/Questions'
 import { Completions } from './collections/Completions'
 import { TestResults } from './collections/TestResults'
 import { Departments } from './collections/Departments'
+import { Certificates } from './collections/Certificates'
 import { migrations } from './migrations'
 
 const filename = fileURLToPath(import.meta.url)
@@ -24,7 +25,7 @@ export default buildConfig({
       baseDir: path.resolve(dirname),
     },
   },
-  collections: [Users, Media, Topics, Questions, Completions, TestResults, Departments],
+  collections: [Users, Media, Topics, Questions, Completions, TestResults, Certificates, Departments],
   editor: lexicalEditor(),
   secret: process.env.PAYLOAD_SECRET || '',
   typescript: {

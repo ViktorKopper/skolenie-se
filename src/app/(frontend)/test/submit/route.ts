@@ -2,7 +2,8 @@ import { getPayload } from 'payload'
 import { NextResponse } from 'next/server'
 import config from '@/payload.config'
 import { loadBank, type BankQ } from '@/quiz-bank'
-import { certToken } from '@/cert'
+import { certPdfPath, issueCertificate, VALID_MONTHS } from '@/certificates'
+import { isAdminUser } from '@/access'
 import {
   POINTS,
   TEST_PASS_PCT,
@@ -29,7 +30,7 @@ export async function POST(req: Request) {
   const email = String(u.email || '').toLowerCase()
   const name = String(u.name || email)
 
-  let body: { answers?: unknown }
+  let body: { answers?: unknown; demo?: unknown }
   try {
     body = await req.json()
   } catch {
@@ -80,6 +81,31 @@ export async function POST(req: Request) {
   const percent = Math.round((score / maxScore) * 100)
   const correctCount = graded.filter((g) => g.ok).length
 
+  // ukážkový režim (/demo/test) – len admin, nič sa neukladá
+  const demo = body.demo === true && isAdminUser(u)
+  if (demo) {
+    const until = new Date()
+    until.setMonth(until.getMonth() + VALID_MONTHS)
+    return NextResponse.json({
+      ok: true,
+      resultId: 'demo',
+      certificate: passed ? { number: 'UKÁŽKA', url: `/demo/osvedcenie?vysledok=${percent}`, validUntil: until.toISOString() } : null,
+      score,
+      maxScore,
+      percent,
+      passed,
+      correctCount,
+      total: graded.length,
+      results: graded.map((g) => ({
+        id: g.q.id,
+        correct: g.ok,
+        correctIdx: g.correctIdx,
+        explanation: g.q.explanation,
+        points: POINTS[g.q.difficulty],
+      })),
+    })
+  }
+
   const saved = await payload.create({
     collection: 'test-results',
     data: {
@@ -104,10 +130,21 @@ export async function POST(req: Request) {
     },
   })
 
+  // úspešný test → osvedčenie (ak už má platné, vráti to existujúce)
+  let certificate: { number: string; url: string; validUntil: string } | null = null
+  if (passed) {
+    try {
+      const c = await issueCertificate(payload, u, saved)
+      if (c) certificate = { number: c.number, url: certPdfPath(c.number), validUntil: c.validUntil }
+    } catch (e) {
+      payload.logger.error({ err: e }, 'Vydanie osvedčenia zlyhalo')
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     resultId: String(saved.id),
-    certToken: passed ? certToken(saved.id) : null,
+    certificate,
     score,
     maxScore,
     percent,

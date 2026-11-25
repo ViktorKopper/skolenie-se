@@ -3,7 +3,7 @@ import { headers } from 'next/headers'
 import { redirect } from 'next/navigation'
 import React from 'react'
 import config from '@/payload.config'
-import { certToken } from '@/cert'
+import { certPdfPath, certStatus, ensureCertificate } from '@/certificates'
 import { userCompletions, userTests } from '@/user-progress'
 import MyTraining from '../MyTraining'
 
@@ -25,6 +25,14 @@ export default async function MyTrainingPage() {
       : Promise.resolve(null),
   ])
 
+  // osvedčenie (doplní sa aj za úspešný test spred zavedenia osvedčení)
+  let cert: Awaited<ReturnType<typeof ensureCertificate>> = null
+  try {
+    cert = await ensureCertificate(payload, u, tests)
+  } catch (e) {
+    payload.logger.error({ err: e }, 'Doplnenie osvedčenia zlyhalo')
+  }
+
   const doneAt = new Map<string, string>()
   for (const c of comps) {
     const tid = typeof c.topic === 'object' && c.topic ? String(c.topic.id) : String(c.topic)
@@ -37,7 +45,7 @@ export default async function MyTrainingPage() {
       <section className="app-hero">
         <div className="govuk-width-container">
           <h1 className="govuk-heading-xl">Moje školenie</h1>
-          <p className="govuk-body-l">Váš postup v témach, výsledky záverečného testu a potvrdenie o absolvovaní.</p>
+          <p className="govuk-body-l">Váš postup v témach, výsledky záverečného testu a osvedčenie o absolvovaní.</p>
         </div>
       </section>
       <div className="govuk-width-container govuk-main-wrapper">
@@ -60,8 +68,18 @@ export default async function MyTrainingPage() {
             score: r.score,
             maxScore: r.maxScore,
             passed: Boolean(r.passed),
-            certUrl: r.passed ? `/potvrdenie/${r.id}?t=${certToken(r.id)}` : null,
           }))}
+          certificate={
+            cert
+              ? {
+                  number: cert.number,
+                  url: certPdfPath(cert.number),
+                  issuedAt: cert.issuedAt,
+                  validUntil: cert.validUntil,
+                  status: certStatus(cert),
+                }
+              : null
+          }
         />
       </div>
     </>
